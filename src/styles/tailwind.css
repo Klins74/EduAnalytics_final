@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Colors */
+    --color-primary: #1E40AF; /* Deep blue (primary) - blue-800 */
+    --color-primary-50: #EFF6FF; /* Very light blue - blue-50 */
+    --color-primary-100: #DBEAFE; /* Light blue - blue-100 */
+    --color-primary-500: #3B82F6; /* Medium blue - blue-500 */
+    --color-primary-600: #2563EB; /* Darker blue - blue-600 */
+    --color-primary-700: #1D4ED8; /* Dark blue - blue-700 */
+    
+    /* Secondary Colors */
+    --color-secondary: #7C3AED; /* Intelligent purple (secondary) - violet-600 */
+    --color-secondary-50: #F5F3FF; /* Very light purple - violet-50 */
+    --color-secondary-100: #EDE9FE; /* Light purple - violet-100 */
+    --color-secondary-500: #8B5CF6; /* Medium purple - violet-500 */
+    
+    /* Accent Colors */
+    --color-accent: #F59E0B; /* Warm amber (accent) - amber-500 */
+    --color-accent-50: #FFFBEB; /* Very light amber - amber-50 */
+    --color-accent-100: #FEF3C7; /* Light amber - amber-100 */
+    --color-accent-600: #D97706; /* Darker amber - amber-600 */
+    
+    /* Background Colors */
+    --color-background: #FAFBFC; /* Soft off-white (background) - gray-50 */
+    --color-surface: #FFFFFF; /* Pure white (surface) - white */
+    
+    /* Text Colors */
+    --color-text-primary: #1F2937; /* Rich charcoal (text primary) - gray-800 */
+    --color-text-secondary: #6B7280; /* Balanced gray (text secondary) - gray-500 */
+    --color-text-muted: #9CA3AF; /* Light gray for muted text - gray-400 */
+    
+    /* Status Colors */
+    --color-success: #10B981; /* Encouraging green (success) - emerald-500 */
+    --color-success-50: #ECFDF5; /* Very light green - emerald-50 */
+    --color-success-100: #D1FAE5; /* Light green - emerald-100 */
+    
+    --color-warning: #F59E0B; /* Constructive amber (warning) - amber-500 */
+    --color-warning-50: #FFFBEB; /* Very light amber - amber-50 */
+    --color-warning-100: #FEF3C7; /* Light amber - amber-100 */
+    
+    --color-error: #EF4444; /* Clear red (error) - red-500 */
+    --color-error-50: #FEF2F2; /* Very light red - red-50 */
+    --color-error-100: #FEE2E2; /* Light red - red-100 */
+    
+    /* Border Colors */
+    --color-border: #E5E7EB; /* Minimal border color - gray-200 */
+    --color-border-light: #F3F4F6; /* Light border - gray-100 */
+    
+    /* Shadow Colors */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  body {
+    font-family: 'Source Sans Pro', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .font-data {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* AI Indicators */
+  .ai-pulse {
+    animation: ai-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes ai-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  
+  /* Loading States */
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  /* Micro-interactions */
+  .hover-lift {
+    transition: transform 150ms ease-out;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* Card Elevation */
+  .card-elevation {
+    transition: box-shadow 300ms ease-in-out;
+  }
+  
+  .card-elevation:hover {
+    box-shadow: var(--shadow-lg);
+  }
+  
+  /* Grid Transitions */
+  .grid-transition {
+    transition: all 300ms ease-in-out;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .backdrop-blur-subtle {
+    backdrop-filter: blur(8px);
+  }
+}
