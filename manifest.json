@@ -1,6 +1,6 @@
 {
-  "short_name": "eduanalytics_ai",
-  "name": "eduanalytics_ai",
+  "short_name": "EduAnalytics",
+  "name": "EduAnalytics — образовательная аналитика",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,7 +8,7 @@
       "type": "image/x-icon"
     }
   ],
-  "start_url": ".",
+  "start_url": "/EduAnalytics_final/",
   "display": "standalone",
   "theme_color": "#000000",
   "background_color": "#ffffff"
