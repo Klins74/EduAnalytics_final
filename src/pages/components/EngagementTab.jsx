@@ -1,56 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import Icon from '../../components/AppIcon';
+import { getEngagementTabData } from '../../api/mockApi.js';
 
 const EngagementTab = ({ period, analysisType }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [engagementData, setEngagementData] = useState([]);
+  const [activityHeatmap, setActivityHeatmap] = useState([]);
+  const [engagementMetrics, setEngagementMetrics] = useState([]);
+  const [topEngagedStudents, setTopEngagedStudents] = useState([]);
+  const [lowEngagementStudents, setLowEngagementStudents] = useState([]);
+
   const [selectedView, setSelectedView] = useState('overview');
 
-  const engagementData = [
-    { day: 'Пн', online: 85, offline: 78, participation: 82 },
-    { day: 'Вт', online: 88, offline: 82, participation: 85 },
-    { day: 'Ср', online: 92, offline: 85, participation: 88 },
-    { day: 'Чт', online: 87, offline: 80, participation: 84 },
-    { day: 'Пт', online: 83, offline: 76, participation: 79 },
-    { day: 'Сб', online: 45, offline: 35, participation: 40 },
-    { day: 'Вс', online: 32, offline: 28, participation: 30 }
-  ];
-
-  const activityHeatmap = [
-    { hour: '08:00', Mon: 45, Tue: 52, Wed: 48, Thu: 51, Fri: 46, Sat: 12, Sun: 8 },
-    { hour: '09:00', Mon: 78, Tue: 82, Wed: 85, Thu: 79, Fri: 76, Sat: 25, Sun: 15 },
-    { hour: '10:00', Mon: 92, Tue: 95, Wed: 98, Thu: 94, Fri: 89, Sat: 35, Sun: 22 },
-    { hour: '11:00', Mon: 88, Tue: 91, Wed: 94, Thu: 90, Fri: 85, Sat: 42, Sun: 28 },
-    { hour: '12:00', Mon: 85, Tue: 88, Wed: 91, Thu: 87, Fri: 82, Sat: 38, Sun: 25 },
-    { hour: '13:00', Mon: 72, Tue: 75, Wed: 78, Thu: 74, Fri: 69, Sat: 45, Sun: 32 },
-    { hour: '14:00', Mon: 68, Tue: 71, Wed: 74, Thu: 70, Fri: 65, Sat: 48, Sun: 35 },
-    { hour: '15:00', Mon: 82, Tue: 85, Wed: 88, Thu: 84, Fri: 79, Sat: 52, Sun: 38 },
-    { hour: '16:00', Mon: 76, Tue: 79, Wed: 82, Thu: 78, Fri: 73, Sat: 48, Sun: 34 },
-    { hour: '17:00', Mon: 65, Tue: 68, Wed: 71, Thu: 67, Fri: 62, Sat: 42, Sun: 28 }
-  ];
-
-  const engagementMetrics = [
-    { metric: 'Активность в чате', value: 85, fullMark: 100 },
-    { metric: 'Участие в опросах', value: 78, fullMark: 100 },
-    { metric: 'Выполнение заданий', value: 92, fullMark: 100 },
-    { metric: 'Время в системе', value: 88, fullMark: 100 },
-    { metric: 'Взаимодействие с материалами', value: 76, fullMark: 100 },
-    { metric: 'Обратная связь', value: 82, fullMark: 100 }
-  ];
-
-  const topEngagedStudents = [
-    { name: 'Петрова Мария', score: 95, activities: 156, timeSpent: '8ч 45м' },
-    { name: 'Иванов Алексей', score: 92, activities: 142, timeSpent: '7ч 32м' },
-    { name: 'Сидорова Анна', score: 89, activities: 138, timeSpent: '7ч 18м' },
-    { name: 'Козлов Дмитрий', score: 87, activities: 134, timeSpent: '6ч 54м' },
-    { name: 'Морозов Игорь', score: 85, activities: 129, timeSpent: '6ч 41м' }
-  ];
-
-  const lowEngagementStudents = [
-    { name: 'Волков Сергей', score: 42, activities: 23, timeSpent: '1ч 15м', risk: 'high' },
-    { name: 'Лебедева Ольга', score: 38, activities: 19, timeSpent: '0ч 58м', risk: 'high' },
-    { name: 'Новиков Павел', score: 45, activities: 28, timeSpent: '1ч 32м', risk: 'medium' },
-    { name: 'Федорова Елена', score: 48, activities: 31, timeSpent: '1ч 45м', risk: 'medium' }
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getEngagementTabData();
+        setEngagementData(data.engagementData || []);
+        setActivityHeatmap(data.activityHeatmap || []);
+        setEngagementMetrics(data.engagementMetrics || []);
+        setTopEngagedStudents(data.topEngagedStudents || []);
+        setLowEngagementStudents(data.lowEngagementStudents || []);
+      } catch (error) {
+        console.error("Ошибка загрузки данных для вкладки Вовлеченность:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const getHeatmapColor = (value) => {
     if (value >= 80) return 'bg-success';
@@ -68,6 +48,19 @@ const EngagementTab = ({ period, analysisType }) => {
     { id: 'heatmap', label: 'Тепловая карта', icon: 'Grid3X3' },
     { id: 'students', label: 'По студентам', icon: 'Users' }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4">
+        <div className="h-10 bg-gray-200 rounded-lg animate-pulse w-1/2"></div>
+        <div className="h-32 bg-gray-200 rounded-lg animate-pulse"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-gray-200 rounded-lg animate-pulse"></div>
+          <div className="h-80 bg-gray-200 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,6 +83,7 @@ const EngagementTab = ({ period, analysisType }) => {
 
       {/* Engagement KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ... Содержимое KPI остается без изменений ... */}
         <div className="bg-background border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -106,7 +100,6 @@ const EngagementTab = ({ period, analysisType }) => {
             <span className="text-sm text-text-muted">за неделю</span>
           </div>
         </div>
-
         <div className="bg-background border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -123,7 +116,6 @@ const EngagementTab = ({ period, analysisType }) => {
             <span className="text-sm text-text-muted">за неделю</span>
           </div>
         </div>
-
         <div className="bg-background border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -140,7 +132,6 @@ const EngagementTab = ({ period, analysisType }) => {
             <span className="text-sm text-text-muted">за неделю</span>
           </div>
         </div>
-
         <div className="bg-background border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -161,12 +152,10 @@ const EngagementTab = ({ period, analysisType }) => {
 
       {selectedView === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Weekly Engagement Trend */}
           <div className="bg-background border border-border rounded-lg p-6">
             <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
               Динамика вовлеченности по дням
             </h3>
-            
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={engagementData}>
@@ -174,49 +163,23 @@ const EngagementTab = ({ period, analysisType }) => {
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="online" 
-                    stackId="1"
-                    stroke="#3B82F6" 
-                    fill="#3B82F6" 
-                    fillOpacity={0.6}
-                    name="Онлайн активность"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="offline" 
-                    stackId="1"
-                    stroke="#10B981" 
-                    fill="#10B981" 
-                    fillOpacity={0.6}
-                    name="Офлайн активность"
-                  />
+                  <Area type="monotone" dataKey="online" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="Онлайн активность"/>
+                  <Area type="monotone" dataKey="offline" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="Офлайн активность"/>
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
-
-          {/* Engagement Radar */}
           <div className="bg-background border border-border rounded-lg p-6">
             <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
               Метрики вовлеченности
             </h3>
-            
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={engagementMetrics}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10 }} />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                  <Radar
-                    name="Вовлеченность"
-                    dataKey="value"
-                    stroke="#7C3AED"
-                    fill="#7C3AED"
-                    fillOpacity={0.3}
-                    strokeWidth={2}
-                  />
+                  <Radar name="Вовлеченность" dataKey="value" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.3} strokeWidth={2}/>
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -229,7 +192,6 @@ const EngagementTab = ({ period, analysisType }) => {
           <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
             Тепловая карта активности по времени
           </h3>
-          
           <div className="overflow-x-auto">
             <div className="min-w-[600px]">
               <div className="grid grid-cols-8 gap-1 mb-2">
@@ -260,7 +222,6 @@ const EngagementTab = ({ period, analysisType }) => {
               ))}
             </div>
           </div>
-          
           <div className="flex items-center justify-center space-x-4 mt-4 text-xs">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-error rounded opacity-30" />
@@ -284,12 +245,10 @@ const EngagementTab = ({ period, analysisType }) => {
 
       {selectedView === 'students' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Engaged Students */}
           <div className="bg-background border border-border rounded-lg p-6">
             <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
               Самые активные студенты
             </h3>
-            
             <div className="space-y-3">
               {topEngagedStudents.map((student, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-success-50 rounded-lg">
@@ -312,12 +271,10 @@ const EngagementTab = ({ period, analysisType }) => {
             </div>
           </div>
 
-          {/* Low Engagement Students */}
           <div className="bg-background border border-border rounded-lg p-6">
             <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
               Требуют внимания
             </h3>
-            
             <div className="space-y-3">
               {lowEngagementStudents.map((student, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-error-50 rounded-lg">

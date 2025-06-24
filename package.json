@@ -2,8 +2,9 @@
   "name": "eduanalytics_ai",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://Klins74.github.io/eduanalytics_ai",
   "dependencies": {
-    "@dhiwise/component-tagger": "^1.0.9",
+    "@google/generative-ai": "^0.24.1",
     "@reduxjs/toolkit": "^2.6.1",
     "@tailwindcss/forms": "^0.5.7",
     "@testing-library/jest-dom": "^5.15.1",
@@ -30,7 +31,9 @@
   "scripts": {
     "start": "vite",
     "build": "vite build --sourcemap",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -57,9 +60,10 @@
     "@tailwindcss/typography": "^0.5.16",
     "@vitejs/plugin-react": "4.3.4",
     "autoprefixer": "10.4.2",
-    "postcss": "8.4.8",
+    "gh-pages": "^6.3.0",
+    "postcss": "^8.5.6",
     "tailwindcss": "3.4.6",
-    "vite": "5.0.0",
+    "vite": "^5.4.19",
     "vite-tsconfig-paths": "3.6.0"
   }
 }

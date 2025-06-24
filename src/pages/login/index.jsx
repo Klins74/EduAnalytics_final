@@ -1,3 +1,5 @@
+// src/pages/login/index.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
@@ -15,8 +17,8 @@ const Login = () => {
 
   // Mock credentials for different user types
   const mockCredentials = {
-    admin: { email: 'admin@eduanalytics.ru', password: 'admin123', role: 'Администратор' },
-    teacher: { email: 'teacher@eduanalytics.ru', password: 'teacher123', role: 'Преподаватель' },
+    admin: { email: 'admin@eduanalytics.ru', password: 'admin123', role: 'Әкімші' },
+    teacher: { email: 'teacher@eduanalytics.ru', password: 'teacher123', role: 'Оқытушы' },
     student: { email: 'student@eduanalytics.ru', password: 'student123', role: 'Студент' }
   };
 
@@ -24,15 +26,15 @@ const Login = () => {
     const newErrors = {};
 
     if (!formData.email) {
-      newErrors.email = 'Введите email адрес';
+      newErrors.email = 'Email мекенжайын енгізіңіз';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Введите корректный email адрес';
+      newErrors.email = 'Email мекенжайын дұрыс енгізіңіз';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Введите пароль';
+      newErrors.password = 'Құпия сөзді енгізіңіз';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Пароль должен содержать минимум 6 символов';
+      newErrors.password = 'Құпия сөз кемінде 6 таңбадан тұруы керек';
     }
 
     setErrors(newErrors);
@@ -46,7 +48,6 @@ const Login = () => {
       [name]: value
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -62,24 +63,20 @@ const Login = () => {
 
     setIsLoading(true);
 
-    // Simulate API call
     setTimeout(() => {
-      // Check mock credentials
       const validCredential = Object.values(mockCredentials).find(
         cred => cred.email === formData.email && cred.password === formData.password
       );
 
       if (validCredential) {
-        // Successful login
         localStorage.setItem('user', JSON.stringify({
           email: formData.email,
           role: validCredential.role
         }));
         navigate('/');
       } else {
-        // Invalid credentials
         setErrors({
-          general: 'Неверный email или пароль. Используйте тестовые данные: admin@eduanalytics.ru / admin123'
+          general: 'Қате email немесе құпия сөз. Тесттік деректерді қолданыңыз: admin@eduanalytics.ru / admin123'
         });
       }
       
@@ -88,33 +85,33 @@ const Login = () => {
   };
 
   const handleForgotPassword = () => {
-    alert('Функция восстановления пароля будет доступна в полной версии системы');
+    alert('Құпия сөзді қалпына келтіру функциясы жүйенің толық нұсқасында қолжетімді болады');
   };
 
   const handleExternalLogin = (provider) => {
-    alert(`Вход через ${provider} будет доступен в полной версии системы`);
+    alert(`${provider} арқылы кіру жүйенің толық нұсқасында қолжетімді болады`);
   };
 
   const features = [
     {
       icon: 'BarChart3',
-      title: 'Аналитика в реальном времени',
-      description: 'Отслеживайте активность студентов и анализируйте образовательные данные в режиме реального времени'
+      title: 'Нақты уақыттағы аналитика',
+      description: 'Студенттердің белсенділігін бақылап, білім беру деректерін нақты уақыт режимінде талдаңыз'
     },
     {
       icon: 'Bot',
-      title: 'AI-помощник',
-      description: 'Интеллектуальный анализ данных с помощью искусственного интеллекта и машинного обучения'
+      title: 'AI-көмекші',
+      description: 'Жасанды интеллект пен машиналық оқытуды қолдана отырып, деректерді интеллектуалды талдау'
     },
     {
       icon: 'Users',
-      title: 'Мониторинг студентов',
-      description: 'Комплексное отслеживание успеваемости и вовлеченности учащихся в образовательный процесс'
+      title: 'Студенттер мониторингі',
+      description: 'Оқушылардың үлгерімі мен оқу процесіне қатысуын кешенді бақылау'
     },
     {
       icon: 'TrendingUp',
-      title: 'Прогнозная аналитика',
-      description: 'Предсказание образовательных результатов на основе анализа поведенческих паттернов'
+      title: 'Болжамды аналитика',
+      description: 'Мінез-құлық үлгілерін талдау негізінде білім беру нәтижелерін болжау'
     }
   ];
 
@@ -125,7 +122,6 @@ const Login = () => {
           {/* Login Form Section */}
           <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
             <div className="w-full max-w-md">
-              {/* Logo and Title */}
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Icon name="GraduationCap" size={32} color="white" />
@@ -134,27 +130,24 @@ const Login = () => {
                   EduAnalytics AI
                 </h1>
                 <p className="text-text-secondary">
-                  Интеллектуальная система образовательной аналитики
+                  Білім беру аналитикасының интеллектуалды жүйесі
                 </p>
               </div>
 
-              {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* General Error */}
                 {errors.general && (
                   <div className="bg-error-50 border border-error-100 rounded-lg p-4 flex items-start space-x-3">
                     <Icon name="AlertCircle" size={20} className="text-error flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-error font-medium">Ошибка входа</p>
+                      <p className="text-sm text-error font-medium">Кіру қатесі</p>
                       <p className="text-sm text-error mt-1">{errors.general}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Email Field */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
-                    Email адрес
+                    Email мекенжайы
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -169,7 +162,7 @@ const Login = () => {
                       className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-150 ${
                         errors.email ? 'border-error bg-error-50' : 'border-border bg-background'
                       }`}
-                      placeholder="Введите ваш email"
+                      placeholder="Email поштаңызды енгізіңіз"
                       autoComplete="email"
                     />
                   </div>
@@ -181,10 +174,9 @@ const Login = () => {
                   )}
                 </div>
 
-                {/* Password Field */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
-                    Пароль
+                    Құпия сөз
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -199,7 +191,7 @@ const Login = () => {
                       className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-150 ${
                         errors.password ? 'border-error bg-error-50' : 'border-border bg-background'
                       }`}
-                      placeholder="Введите ваш пароль"
+                      placeholder="Құпия сөзді енгізіңіз"
                       autoComplete="current-password"
                     />
                     <button
@@ -222,18 +214,16 @@ const Login = () => {
                   )}
                 </div>
 
-                {/* Forgot Password */}
                 <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={handleForgotPassword}
                     className="text-sm text-primary hover:text-primary-700 transition-colors duration-150"
                   >
-                    Забыли пароль?
+                    Құпия сөзді ұмыттыңыз ба?
                   </button>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -242,23 +232,22 @@ const Login = () => {
                   {isLoading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Вход в систему...</span>
+                      <span>Кіруде...</span>
                     </>
                   ) : (
                     <>
                       <Icon name="LogIn" size={20} />
-                      <span>Войти</span>
+                      <span>Кіру</span>
                     </>
                   )}
                 </button>
 
-                {/* External Login Options */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-surface text-text-secondary">или войдите через</span>
+                    <span className="px-2 bg-surface text-text-secondary">немесе осы арқылы кіріңіз</span>
                   </div>
                 </div>
 
@@ -281,15 +270,14 @@ const Login = () => {
                   </button>
                 </div>
 
-                {/* Test Credentials Info */}
                 <div className="bg-primary-50 border border-primary-100 rounded-lg p-4">
                   <div className="flex items-start space-x-3">
                     <Icon name="Info" size={20} className="text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-primary font-medium mb-2">Тестовые данные для входа:</p>
+                      <p className="text-sm text-primary font-medium mb-2">Тесттік деректер:</p>
                       <div className="space-y-1 text-xs text-primary">
-                        <p><strong>Администратор:</strong> admin@eduanalytics.ru / admin123</p>
-                        <p><strong>Преподаватель:</strong> teacher@eduanalytics.ru / teacher123</p>
+                        <p><strong>Әкімші:</strong> admin@eduanalytics.ru / admin123</p>
+                        <p><strong>Оқытушы:</strong> teacher@eduanalytics.ru / teacher123</p>
                         <p><strong>Студент:</strong> student@eduanalytics.ru / student123</p>
                       </div>
                     </div>
@@ -304,10 +292,10 @@ const Login = () => {
             <div className="h-full flex flex-col justify-center">
               <div className="mb-8">
                 <h2 className="text-3xl font-heading font-bold mb-4">
-                  Добро пожаловать в будущее образования
+                  Білім берудің болашағына қош келдіңіз
                 </h2>
                 <p className="text-lg opacity-90 mb-8">
-                  Революционная платформа для анализа образовательных данных с использованием искусственного интеллекта и машинного обучения
+                  Жасанды интеллект пен машиналық оқытуды қолдана отырып, білім беру деректерін талдауға арналған революциялық платформа
                 </p>
               </div>
 
@@ -333,8 +321,8 @@ const Login = () => {
                     <div className="w-8 h-8 bg-white bg-opacity-40 rounded-full border-2 border-white" />
                   </div>
                   <div>
-                    <p className="font-medium">Более 10,000+ пользователей</p>
-                    <p className="text-sm opacity-75">доверяют нашей платформе</p>
+                    <p className="font-medium">10,000+ астам қолданушы</p>
+                    <p className="text-sm opacity-75">біздің платформамызға сенеді</p>
                   </div>
                 </div>
               </div>

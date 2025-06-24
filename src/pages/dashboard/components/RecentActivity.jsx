@@ -13,7 +13,7 @@ const RecentActivity = () => {
     {
       id: 1,
       type: 'login',
-      student: 'Иванов Иван Иванович',
+      student: 'Айзере Асқар',
       action: 'Вход в систему',
       course: 'Математический анализ',
       timestamp: new Date(Date.now() - 300000), // 5 minutes ago
@@ -23,7 +23,7 @@ const RecentActivity = () => {
     {
       id: 2,
       type: 'assignment',
-      student: 'Петрова Мария Сергеевна',
+      student: 'Нұрлан Оспанов',
       action: 'Сдача задания',
       course: 'Физика',
       timestamp: new Date(Date.now() - 900000), // 15 minutes ago
@@ -33,7 +33,7 @@ const RecentActivity = () => {
     {
       id: 3,
       type: 'test',
-      student: 'Сидоров Петр Александрович',
+      student: 'Алихан Берік',
       action: 'Прохождение теста',
       course: 'История',
       timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
@@ -43,7 +43,7 @@ const RecentActivity = () => {
     {
       id: 4,
       type: 'forum',
-      student: 'Козлова Анна Дмитриевна',
+      student: 'Анель Маратова',
       action: 'Сообщение на форуме',
       course: 'Литература',
       timestamp: new Date(Date.now() - 2700000), // 45 minutes ago
@@ -53,7 +53,7 @@ const RecentActivity = () => {
     {
       id: 5,
       type: 'logout',
-      student: 'Морозов Алексей Викторович',
+      student: 'Санжар Қайратов',
       action: 'Выход из системы',
       course: 'Химия',
       timestamp: new Date(Date.now() - 3600000), // 1 hour ago
@@ -63,7 +63,7 @@ const RecentActivity = () => {
     {
       id: 6,
       type: 'assignment',
-      student: 'Волкова Елена Павловна',
+      student: 'Камила Ермекова',
       action: 'Просрочка задания',
       course: 'Биология',
       timestamp: new Date(Date.now() - 5400000), // 1.5 hours ago
@@ -73,7 +73,7 @@ const RecentActivity = () => {
     {
       id: 7,
       type: 'login',
-      student: 'Николаев Дмитрий Олегович',
+      student: 'Диас Ертаев',
       action: 'Вход в систему',
       course: 'Информатика',
       timestamp: new Date(Date.now() - 7200000), // 2 hours ago
@@ -83,7 +83,7 @@ const RecentActivity = () => {
     {
       id: 8,
       type: 'test',
-      student: 'Федорова Ольга Ивановна',
+      student: 'Амина Смағұлова',
       action: 'Начало теста',
       course: 'География',
       timestamp: new Date(Date.now() - 9000000), // 2.5 hours ago

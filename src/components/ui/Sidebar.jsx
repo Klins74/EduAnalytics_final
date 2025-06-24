@@ -17,22 +17,22 @@ const Sidebar = () => {
       requiredRole: 'admin',
       contextualTooltip: 'Центральная панель управления системой'
     },
-    {
-      id: 'monitoring',
-      label: 'Мониторинг студентов',
-      path: '/',
-      icon: 'Users',
-      requiredRole: 'admin',
-      contextualTooltip: 'Отслеживание активности студентов в реальном времени'
-    },
-    {
-      id: 'analytics',
-      label: 'Аналитика и отчеты',
-      path: '/',
-      icon: 'BarChart3',
-      requiredRole: 'admin',
-      contextualTooltip: 'Глубокая аналитика и генерация отчетов'
-    },
+// ...
+{
+  id: 'monitoring',
+  label: 'Мониторинг студентов',
+  path: '/monitoring', // <-- ИЗМЕНЕНО
+  icon: 'Users',
+  //...
+},
+{
+  id: 'analytics',
+  label: 'Аналитика и отчеты',
+  path: '/analytics', // <-- ИЗМЕНЕНО
+  icon: 'BarChart3',
+  //...
+},
+// ...
     {
       id: 'ai-assistant',
       label: 'AI-помощник',

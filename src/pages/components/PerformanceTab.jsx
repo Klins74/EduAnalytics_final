@@ -43,13 +43,13 @@ const PerformanceTab = ({ period, analysisType }) => {
         { class: '10В', average: 3.8, students: 24 }
       ],
       topStudents: [
-        { name: 'Иванов Алексей', grade: 4.8 },
-        { name: 'Петрова Мария', grade: 4.7 },
-        { name: 'Сидоров Дмитрий', grade: 4.6 }
+        { name: 'Алихан Берік', grade: 4.8 },
+        { name: 'Айзере Асқар', grade: 4.7 },
+        { name: 'Нұрлан Оспанов', grade: 4.6 }
       ],
       strugglingStudents: [
-        { name: 'Козлов Игорь', grade: 3.2 },
-        { name: 'Морозова Анна', grade: 3.1 }
+        { name: 'Диас Ертаев', grade: 3.2 },
+        { name: 'Анель Маратова', grade: 3.1 }
       ]
     };
     setDrillDownData(mockDetailData);
