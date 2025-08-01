@@ -4,7 +4,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/eduanalytics_ai/", // Важно для GitHub Pages
+  //base: "/eduanalytics_ai/", // Важно для GitHub Pages
   build: {
     outDir: "build",           // Изменён выходной каталог
     chunkSizeWarningLimit: 2000,

@@ -1,96 +1,16 @@
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 
-const RecentActivity = () => {
+// 1. Компонент теперь принимает 'activities' как проп. 
+//    Добавлено значение по умолчанию `[]`, чтобы избежать ошибок, если данные еще не загрузились.
+const RecentActivity = ({ activities = [] }) => {
   const [sortField, setSortField] = useState('timestamp');
   const [sortDirection, setSortDirection] = useState('desc');
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Mock recent activity data
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'login',
-      student: 'Айзере Асқар',
-      action: 'Вход в систему',
-      course: 'Математический анализ',
-      timestamp: new Date(Date.now() - 300000), // 5 minutes ago
-      status: 'success',
-      details: 'Успешная авторизация через веб-интерфейс'
-    },
-    {
-      id: 2,
-      type: 'assignment',
-      student: 'Нұрлан Оспанов',
-      action: 'Сдача задания',
-      course: 'Физика',
-      timestamp: new Date(Date.now() - 900000), // 15 minutes ago
-      status: 'success',
-      details: 'Лабораторная работа №3 - оценка 4.5'
-    },
-    {
-      id: 3,
-      type: 'test',
-      student: 'Алихан Берік',
-      action: 'Прохождение теста',
-      course: 'История',
-      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
-      status: 'warning',
-      details: 'Тест завершен с результатом 65% - требует внимания'
-    },
-    {
-      id: 4,
-      type: 'forum',
-      student: 'Анель Маратова',
-      action: 'Сообщение на форуме',
-      course: 'Литература',
-      timestamp: new Date(Date.now() - 2700000), // 45 minutes ago
-      status: 'success',
-      details: 'Новое сообщение в обсуждении "Анализ произведений"'
-    },
-    {
-      id: 5,
-      type: 'logout',
-      student: 'Санжар Қайратов',
-      action: 'Выход из системы',
-      course: 'Химия',
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-      status: 'info',
-      details: 'Сессия завершена после 2 часов активности'
-    },
-    {
-      id: 6,
-      type: 'assignment',
-      student: 'Камила Ермекова',
-      action: 'Просрочка задания',
-      course: 'Биология',
-      timestamp: new Date(Date.now() - 5400000), // 1.5 hours ago
-      status: 'error',
-      details: 'Задание "Клеточная структура" просрочено на 2 дня'
-    },
-    {
-      id: 7,
-      type: 'login',
-      student: 'Диас Ертаев',
-      action: 'Вход в систему',
-      course: 'Информатика',
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-      status: 'success',
-      details: 'Авторизация с мобильного устройства'
-    },
-    {
-      id: 8,
-      type: 'test',
-      student: 'Амина Смағұлова',
-      action: 'Начало теста',
-      course: 'География',
-      timestamp: new Date(Date.now() - 9000000), // 2.5 hours ago
-      status: 'info',
-      details: 'Начат итоговый тест по разделу "Климат"'
-    }
-  ];
+  // 2. Блок с mock-данными `const recentActivities = [...]` был полностью удален.
 
   const activityTypes = [
     { value: 'all', label: 'Все действия', icon: 'Activity' },
@@ -133,17 +53,20 @@ const RecentActivity = () => {
   };
 
   const formatTimestamp = (timestamp) => {
+    // API возвращает время в виде строки, преобразуем его в объект Date
+    const activityDate = new Date(timestamp);
     const now = new Date();
-    const diff = now - timestamp;
+    const diff = now - activityDate;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     
+    if (minutes < 1) return 'Только что';
     if (minutes < 60) {
       return `${minutes} мин назад`;
     } else if (hours < 24) {
       return `${hours} ч назад`;
     } else {
-      return timestamp.toLocaleDateString('ru-RU', {
+      return activityDate.toLocaleDateString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -162,7 +85,8 @@ const RecentActivity = () => {
     }
   };
 
-  const filteredActivities = recentActivities.filter(activity => 
+  // 3. Логика фильтрации и сортировки теперь работает с 'activities' из пропсов.
+  const filteredActivities = activities.filter(activity => 
     filterType === 'all' || activity.type === filterType
   );
 
@@ -170,9 +94,10 @@ const RecentActivity = () => {
     let aValue = a[sortField];
     let bValue = b[sortField];
     
+    // Преобразуем строки времени в числа для корректной сортировки
     if (sortField === 'timestamp') {
-      aValue = aValue.getTime();
-      bValue = bValue.getTime();
+      aValue = new Date(aValue).getTime();
+      bValue = new Date(bValue).getTime();
     }
     
     if (sortDirection === 'asc') {
@@ -188,7 +113,6 @@ const RecentActivity = () => {
 
   return (
     <div className="bg-surface border border-border rounded-lg">
-      {/* Header */}
       <div className="p-6 border-b border-border">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
           <div className="mb-4 lg:mb-0">
@@ -200,7 +124,6 @@ const RecentActivity = () => {
             </p>
           </div>
           
-          {/* Filters */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Icon name="Filter" size={16} className="text-text-secondary" />
@@ -225,7 +148,6 @@ const RecentActivity = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-background border-b border-border">
@@ -284,7 +206,7 @@ const RecentActivity = () => {
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {activity.student.split(' ')[0][0]}{activity.student.split(' ')[1][0]}
+                        {activity.student.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                     <div>
@@ -325,7 +247,6 @@ const RecentActivity = () => {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="px-6 py-4 border-t border-border">
           <div className="flex items-center justify-between">

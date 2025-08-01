@@ -1,3 +1,5 @@
+// src/pages/ai/index.jsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/ui/Header';
@@ -8,7 +10,6 @@ import ChatHistory from './components/ChatHistory';
 import ContextPanel from './components/ContextPanel';
 import QuickActions from './components/QuickActions';
 import VoiceInput from './components/VoiceInput';
-import { getAiChatResponse } from '../../api/mockApi.js'; // Наш импорт для имитации API
 
 const AIPage = () => {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ const AIPage = () => {
     {
       id: 1,
       type: 'ai',
-      content: `Добро пожаловать в AI-помощник EduAnalytics! Я специализируюсь на анализе образовательных данных и могу помочь вам с:\n\n• Анализом успеваемости студентов\n• Выявлением паттернов обучения\n• Генерацией персонализированных отчетов\n\nЧем могу помочь сегодня?`,
+      content: `Добро пожаловать в AI-помощник EduAnalytics! Чем могу помочь сегодня?`,
       timestamp: new Date(),
     }
   ]);
@@ -32,7 +33,7 @@ const AIPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ГЛАВНОЕ ИЗМЕНЕНИЕ: ФУНКЦИЯ СТАЛА АСИНХРОННОЙ И ВЫЗЫВАЕТ API
+  // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: ФУНКЦИЯ ОБНОВЛЕНА ДЛЯ РАБОТЫ С РЕАЛЬНЫМ API ---
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim() || isTyping) return;
@@ -49,19 +50,43 @@ const AIPage = () => {
     setInputValue('');
     setIsTyping(true);
 
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        navigate('/login');
+        return;
+    }
+
     try {
-      // Вызываем наше новое API и ждем ответа
-      const aiResponseText = await getAiChatResponse(currentInput);
+      const response = await fetch('http://localhost:8000/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: currentInput })
+      });
+      
+      if (response.status === 401) {
+          navigate('/login');
+          return;
+      }
+
+      if (!response.ok) {
+          throw new Error('Ошибка ответа от AI-сервиса');
+      }
+
+      const aiData = await response.json();
       
       const aiResponse = {
         id: Date.now() + 1,
         type: 'ai',
-        content: aiResponseText,
+        content: aiData.reply, // Используем ответ от бэкенда
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
+
     } catch (error) {
-        console.error("Ошибка ответа от AI-чата:", error);
+        console.error("Ошибка AI-чата:", error);
         const errorResponse = {
             id: Date.now() + 1,
             type: 'ai',
@@ -70,7 +95,7 @@ const AIPage = () => {
         };
         setMessages(prev => [...prev, errorResponse]);
     } finally {
-        setIsTyping(false); // Убираем "AI печатает..."
+        setIsTyping(false);
     }
   };
 
@@ -221,13 +246,6 @@ const AIPage = () => {
             <div className="lg:col-span-4">
               <ContextPanel selectedContext={selectedContext} onContextChange={setSelectedContext}/>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <QuickActions onActionClick={handleQuickSuggestion} />
-          </div>
-          <div className="mt-6">
-            <ChatHistory searchQuery={searchHistory} onSearchChange={setSearchHistory}/>
           </div>
         </div>
       </main>

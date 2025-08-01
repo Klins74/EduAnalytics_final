@@ -8,19 +8,12 @@ import Icon from '../../components/AppIcon';
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: 'admin@eduanalytics.ru', // Предзаполняем для удобства
+    password: 'admin123'             // Предзаполняем для удобства
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Mock credentials for different user types
-  const mockCredentials = {
-    admin: { email: 'admin@eduanalytics.ru', password: 'admin123', role: 'Әкімші' },
-    teacher: { email: 'teacher@eduanalytics.ru', password: 'teacher123', role: 'Оқытушы' },
-    student: { email: 'student@eduanalytics.ru', password: 'student123', role: 'Студент' }
-  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -33,8 +26,6 @@ const Login = () => {
 
     if (!formData.password) {
       newErrors.password = 'Құпия сөзді енгізіңіз';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Құпия сөз кемінде 6 таңбадан тұруы керек';
     }
 
     setErrors(newErrors);
@@ -58,30 +49,43 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-
     setIsLoading(true);
+    setErrors({}); // Сбрасываем старые ошибки
 
-    setTimeout(() => {
-      const validCredential = Object.values(mockCredentials).find(
-        cred => cred.email === formData.email && cred.password === formData.password
-      );
+    // FastAPI OAuth2PasswordRequestForm ожидает данные в формате form-data,
+    // а не JSON. Поэтому мы используем FormData.
+    const formBody = new FormData();
+    formBody.append('username', formData.email);
+    formBody.append('password', formData.password);
 
-      if (validCredential) {
-        localStorage.setItem('user', JSON.stringify({
-          email: formData.email,
-          role: validCredential.role
-        }));
-        navigate('/');
-      } else {
-        setErrors({
-          general: 'Қате email немесе құпия сөз. Тесттік деректерді қолданыңыз: admin@eduanalytics.ru / admin123'
-        });
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/token', {
+        method: 'POST',
+        body: formBody,
+      });
+
+      if (!response.ok) {
+        // Если сервер вернул ошибку (например, 401 Unauthorized)
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Ошибка аутентификации');
       }
+
+      const data = await response.json();
       
+      // Сохраняем токен в localStorage для будущих запросов
+      localStorage.setItem('accessToken', data.access_token);
+      
+      // Перенаправляем пользователя на главную страницу
+      navigate('/');
+
+    } catch (error) {
+      setErrors({
+        general: error.message
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleForgotPassword = () => {
@@ -241,48 +245,6 @@ const Login = () => {
                     </>
                   )}
                 </button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-surface text-text-secondary">немесе осы арқылы кіріңіз</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleExternalLogin('Google')}
-                    className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-background transition-colors duration-150 hover-lift"
-                  >
-                    <Icon name="Chrome" size={20} className="text-text-secondary" />
-                    <span className="ml-2 text-sm text-text-primary">Google</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExternalLogin('Microsoft')}
-                    className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-background transition-colors duration-150 hover-lift"
-                  >
-                    <Icon name="Square" size={20} className="text-text-secondary" />
-                    <span className="ml-2 text-sm text-text-primary">Microsoft</span>
-                  </button>
-                </div>
-
-                <div className="bg-primary-50 border border-primary-100 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <Icon name="Info" size={20} className="text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-primary font-medium mb-2">Тесттік деректер:</p>
-                      <div className="space-y-1 text-xs text-primary">
-                        <p><strong>Әкімші:</strong> admin@eduanalytics.ru / admin123</p>
-                        <p><strong>Оқытушы:</strong> teacher@eduanalytics.ru / teacher123</p>
-                        <p><strong>Студент:</strong> student@eduanalytics.ru / student123</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </form>
             </div>
           </div>
@@ -311,20 +273,6 @@ const Login = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-12 pt-8 border-t border-white border-opacity-20">
-                <div className="flex items-center space-x-4">
-                  <div className="flex -space-x-2">
-                    <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full border-2 border-white" />
-                    <div className="w-8 h-8 bg-white bg-opacity-30 rounded-full border-2 border-white" />
-                    <div className="w-8 h-8 bg-white bg-opacity-40 rounded-full border-2 border-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium">10,000+ астам қолданушы</p>
-                    <p className="text-sm opacity-75">біздің платформамызға сенеді</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

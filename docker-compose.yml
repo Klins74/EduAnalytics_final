@@ -1,0 +1,44 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Бэкенд сервис на FastAPI
+  backend:
+    build: ./server  # Указываем, где находится Dockerfile для сборки
+    env_file: ./.env
+    container_name: eduanalytics_backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # Команда для запуска с авто-перезагрузкой
+    volumes:
+      - ./server:/app  # Синхронизируем код из папки server в контейнер для разработки
+    ports:
+      - "8000:8000"  # Пробрасываем порт 8000 наружу
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/eduanalytics_db
+      - REDIS_URL=redis://cache:6379
+    depends_on:
+      - db          # Запускаем после старта базы данных
+      - cache       # и кэша
+
+  # Сервис базы данных PostgreSQL
+  db:
+    image: postgres:13-alpine
+    container_name: eduanalytics_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # Сохраняем данные между перезапусками
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=eduanalytics_db
+    ports:
+      - "5432:5432" # Пробрасываем порт для возможного прямого подключения
+
+  # Сервис кэширования Redis
+  cache:
+    image: redis:6-alpine
+    container_name: eduanalytics_cache
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:

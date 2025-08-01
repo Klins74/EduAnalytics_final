@@ -6,6 +6,9 @@ import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import Login from "pages/login";
 
+// Импортируем наш новый компонент
+import ProtectedRoute from "components/ProtectedRoute"; 
+
 // Правильные импорты без комментариев
 import Dashboard from "pages/dashboard/index"; 
 import AnalyticsDashboard from "pages/index";   
@@ -19,16 +22,18 @@ const Routes = () => {
       <ErrorBoundary>
         <ScrollToTop />
         <RouterRoutes>
+          {/* Роут для страницы входа остается общедоступным */}
           <Route path="/login" element={<Login />} />
 
-          {/* Главная страница (Панель управления) */}
-          <Route path="/" element={<Dashboard />} />
+          {/* Создаем группу защищенных роутов */}
+          <Route element={<ProtectedRoute />}>
+            {/* Все роуты внутри этой группы будут доступны только авторизованным пользователям */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/ai" element={<AIAssistant />} />
+            <Route path="/monitoring" element={<MonitoringPage />} />
+          </Route>
           
-          {/* Страница с вкладками аналитики */}
-          <Route path="/analytics" element={<AnalyticsDashboard />} />
-
-          <Route path="/ai" element={<AIAssistant />} />
-          <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="*" element={<NotFound />} />
         </RouterRoutes>
       </ErrorBoundary>

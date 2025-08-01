@@ -1,0 +1,17 @@
+# /server/requirements.txt
+
+fastapi
+uvicorn[standard]
+psycopg2-binary
+redis
+sqlalchemy
+
+# Новые зависимости для БД, паролей и токенов
+python-dotenv
+pydantic[email]
+passlib[bcrypt]
+python-jose[cryptography]
+
+# Новая зависимость для обработки форм
+python-multipart
+google-generativeai

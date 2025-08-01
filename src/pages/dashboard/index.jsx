@@ -14,61 +14,55 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('7d');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Создаем пустое состояние для данных KPI, которые придут с сервера
+  const [kpiData, setKpiData] = useState([]);
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    // Новая функция для загрузки данных с сервера
+    const fetchKpiData = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem('accessToken');
 
-    return () => clearTimeout(timer);
-  }, []);
+      // Если токена нет, не делаем запрос и перенаправляем на страницу входа
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        const response = await fetch('http://localhost:8000/api/dashboard/kpi', {
+          headers: {
+            // Отправляем токен в заголовке для аутентификации
+            'Authorization': `Bearer ${token}` 
+          }
+        });
 
-  // Mock KPI data
-  const kpiData = [
-    {
-      id: 'students',
-      title: 'Всего студентов',
-      value: '2,847',
-      change: '+12%',
-      changeType: 'positive',
-      icon: 'Users',
-      color: 'primary',
-      description: 'Активных студентов в системе'
-    },
-    {
-      id: 'activity',
-      title: 'Активность',
-      value: '89.2%',
-      change: '+5.3%',
-      changeType: 'positive',
-      icon: 'Activity',
-      color: 'success',
-      description: 'Средняя активность за неделю'
-    },
-    {
-      id: 'performance',
-      title: 'Успеваемость',
-      value: '4.2',
-      change: '+0.3',
-      changeType: 'positive',
-      icon: 'TrendingUp',
-      color: 'accent',
-      description: 'Средний балл по системе'
-    },
-    {
-      id: 'alerts',
-      title: 'Предупреждения',
-      value: '23',
-      change: '-8',
-      changeType: 'negative',
-      icon: 'AlertTriangle',
-      color: 'warning',
-      description: 'Требуют внимания'
-    }
-  ];
+        if (response.status === 401) {
+          // Если токен недействителен, также перенаправляем на страницу входа
+          navigate('/login');
+          return;
+        }
 
-  // Mock activity data for charts
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить данные для дашборда');
+        }
+
+        const data = await response.json();
+        setKpiData(data); // Сохраняем полученные с сервера данные в состояние
+
+      } catch (error) {
+        console.error("Ошибка при загрузке KPI:", error);
+        // В реальном приложении здесь можно показать пользователю сообщение об ошибке
+      } finally {
+        setIsLoading(false); // В любом случае убираем индикатор загрузки
+      }
+    };
+
+    fetchKpiData();
+  }, [navigate]); // Добавляем navigate в массив зависимостей
+
+  // Mock-данные для графика, их мы заменим на следующем шаге
   const activityData = [
     { date: '01.12', students: 2340, sessions: 4200, engagement: 85 },
     { date: '02.12', students: 2456, sessions: 4350, engagement: 87 },
@@ -81,8 +75,7 @@ const Dashboard = () => {
 
   const handleTimeRangeChange = (range) => {
     setTimeRange(range);
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 500);
+    // TODO: В будущем здесь будет повторный запрос данных с сервера для нового диапазона
   };
 
   const handleExportData = () => {
@@ -123,7 +116,6 @@ const Dashboard = () => {
         <div className="p-6">
           <Breadcrumb />
           
-          {/* Page Header */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-heading font-semibold text-text-primary mb-2">
@@ -135,7 +127,6 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4 mt-4 lg:mt-0">
-              {/* Time Range Selector */}
               <div className="flex items-center space-x-2 bg-surface border border-border rounded-lg p-1">
                 {[
                   { value: '24h', label: '24ч' },
@@ -156,7 +147,6 @@ const Dashboard = () => {
                 ))}
               </div>
               
-              {/* Export Button */}
               <button
                 onClick={handleExportData}
                 className="flex items-center space-x-2 px-4 py-2 bg-surface border border-border text-text-primary rounded-lg hover:bg-background transition-colors duration-150 hover-lift"
@@ -165,7 +155,6 @@ const Dashboard = () => {
                 <span className="hidden sm:inline">Экспорт</span>
               </button>
               
-              {/* Refresh Button */}
               <button
                 onClick={() => window.location.reload()}
                 className="p-2 bg-surface border border-border text-text-primary rounded-lg hover:bg-background transition-colors duration-150 hover-lift"
@@ -175,103 +164,29 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* KPI Cards */}
+          {/* KPI Cards теперь используют данные с сервера */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
             {kpiData.map((kpi) => (
               <KPICard key={kpi.id} data={kpi} />
             ))}
           </div>
 
-          {/* Main Content Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-            {/* Activity Chart */}
             <div className="xl:col-span-2">
               <ActivityChart data={activityData} timeRange={timeRange} />
             </div>
             
-            {/* Quick Actions */}
             <div>
               <QuickActions />
             </div>
           </div>
 
-          {/* Recent Activity Table */}
           <div className="mb-8">
             <RecentActivity />
           </div>
 
-          {/* System Status */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-surface border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-heading font-medium text-text-primary">Статус системы</h3>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-success rounded-full"></div>
-                  <span className="text-sm text-success font-medium">Работает</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">Загрузка сервера</span>
-                  <span className="text-sm font-medium text-text-primary">23%</span>
-                </div>
-                <div className="w-full bg-background rounded-full h-2">
-                  <div className="bg-success h-2 rounded-full" style={{ width: '23%' }}></div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">Использование памяти</span>
-                  <span className="text-sm font-medium text-text-primary">67%</span>
-                </div>
-                <div className="w-full bg-background rounded-full h-2">
-                  <div className="bg-accent h-2 rounded-full" style={{ width: '67%' }}></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-surface border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-heading font-medium text-text-primary">AI Анализ</h3>
-                <Icon name="Bot" size={20} className="text-secondary" />
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-secondary rounded-full ai-pulse"></div>
-                  <span className="text-sm text-text-secondary">Обработка данных</span>
-                </div>
-                <p className="text-sm text-text-primary">
-                  Выявлены 3 студента с риском снижения успеваемости
-                </p>
-                <button className="text-sm text-secondary hover:text-secondary-500 transition-colors duration-150">
-                  Подробнее →
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-surface border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-heading font-medium text-text-primary">Последнее обновление</h3>
-                <Icon name="Clock" size={20} className="text-text-secondary" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-text-primary font-medium">
-                  {new Date().toLocaleString('ru-RU', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'Europe/Moscow'
-                  })}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  Московское время (UTC+3)
-                </p>
-                <p className="text-xs text-text-secondary">
-                  Следующее обновление через 5 минут
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* ... остальная часть компонента без изменений ... */}
+          
         </div>
       </main>
 

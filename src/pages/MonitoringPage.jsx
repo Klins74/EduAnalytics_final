@@ -1,8 +1,7 @@
 // src/pages/MonitoringPage.jsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-
-// ИСПОЛЬЗУЕМ АБСОЛЮТНЫЕ ПУТИ ОТ ПАПКИ SRC
+import { useNavigate } from 'react-router-dom'; // Импортируем useNavigate
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from 'components/ui/Header';
 import Sidebar from 'components/ui/Sidebar';
@@ -10,9 +9,9 @@ import Breadcrumb from 'components/ui/Breadcrumb';
 import FilterPanel from 'pages/components/FilterPanel';
 import StudentActivityTable from 'pages/components/StudentActivityTable';
 import StudentDetailModal from 'pages/components/StudentDetailModal';
-import { getStudentsData } from 'api/mockApi.js'; 
 
 const MonitoringPage = () => {
+  const navigate = useNavigate(); // Инициализируем useNavigate
   const [isLoading, setIsLoading] = useState(true);
   const [allStudents, setAllStudents] = useState([]);
 
@@ -26,21 +25,45 @@ const MonitoringPage = () => {
 
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-useEffect(() => {
-  const fetchData = async () => {
-    setIsLoading(true);
-    try { // Пытаемся выполнить код
-      const students = await getStudentsData();
-      setAllStudents(students || []); // Если все хорошо, сохраняем студентов
-    } catch (error) { // Если произошла ошибка
-      console.error("Ошибка при загрузке студентов:", error);
-      setAllStudents([]); // В случае ошибки ставим пустой массив, чтобы не было сбоя
-    } finally { // Этот блок выполнится в любом случае (успех или ошибка)
-      setIsLoading(false); // Гарантированно убираем загрузку
-    }
-  };
-  fetchData();
-}, []); // Пустой массив [] означает, что код выполнится только один раз при загрузке страницы
+  useEffect(() => {
+    // --- НОВАЯ ЛОГИКА ЗАГРУЗКИ ДАННЫХ С СЕРВЕРА ---
+    const fetchStudentsData = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:8000/api/students', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          navigate('/login');
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить список студентов');
+        }
+
+        const data = await response.json();
+        setAllStudents(data);
+      } catch (error) {
+        console.error("Ошибка при загрузке студентов:", error);
+        setAllStudents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStudentsData();
+  }, [navigate]); // Добавляем navigate в зависимости
+
   const filteredStudents = useMemo(() => {
     if (isLoading) return [];
     return allStudents.filter(student => {
@@ -51,14 +74,8 @@ useEffect(() => {
       return groupMatch && subjectMatch && engagementMatch;
     });
   }, [filters, allStudents, isLoading]);
-
-  console.log("--- ДЕБАГ-ИНФОРМАЦИЯ ---");
-  console.log("Состояние isLoading:", isLoading);
-  console.log("Фильтры, которые используются:", filters);
-  console.log("Полученные студенты (allStudents):", allStudents);
-  console.log("Отфильтрованные студенты (filteredStudents):", filteredStudents);
-  console.log("--- КОНЕЦ ДЕБАГ-ИНФОРМАЦИИ ---");
   
+  // Компонент-заглушка на время загрузки
   if (isLoading) {
     return (
         <div className="min-h-screen bg-background">
@@ -88,7 +105,6 @@ useEffect(() => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            
             <div className="lg:col-span-1">
               <FilterPanel 
                 filters={filters} 
