@@ -6,18 +6,16 @@ services:
     build: ./server
     env_file: ./.env
     container_name: eduanalytics_backend
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      sh -c "alembic upgrade head && 
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./server:/app
     ports:
       - "8000:8000"
-    environment:
-      # --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Добавлен драйвер +asyncpg ---
-      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/eduanalytics_db
-      - REDIS_URL=redis://cache
     depends_on:
-      - db
-      - cache
+      db:
+        condition: service_healthy
 
   # Сервис базы данных PostgreSQL
   db:
@@ -31,6 +29,12 @@ services:
       - POSTGRES_DB=eduanalytics_db
     ports:
       - "5432:5432"
+    healthcheck:
+      # --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Добавляем имя базы данных ---
+      test: ["CMD-SHELL", "pg_isready -U user -d eduanalytics_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Сервис кэширования Redis
   cache:

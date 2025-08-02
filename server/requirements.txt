@@ -5,6 +5,7 @@ uvicorn[standard]
 asyncpg
 redis
 sqlalchemy
+alembic
 
 # Зависимости для БД, паролей и токенов
 python-dotenv
