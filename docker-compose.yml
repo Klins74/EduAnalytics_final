@@ -13,6 +13,10 @@ services:
       - ./server:/app
     ports:
       - "8000:8000"
+    environment:
+      - SENTRY_DSN=https://58714683213474f3dc910effbffda5e3@o4509786424541184.ingest.de.sentry.io/4509786456588368
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-1.0}
     depends_on:
       db:
         condition: service_healthy

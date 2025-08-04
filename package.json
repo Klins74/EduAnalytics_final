@@ -6,6 +6,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@reduxjs/toolkit": "^2.6.1",
+    "@sentry/react": "^7.100.0",
     "@tailwindcss/forms": "^0.5.7",
     "@testing-library/jest-dom": "^5.15.1",
     "@testing-library/react": "^11.2.7",

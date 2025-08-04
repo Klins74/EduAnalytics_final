@@ -132,6 +132,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
+# --- Интеграция Sentry для мониторинга ошибок ---
+import sentry_sdk
+
+# Получаем настройки Sentry из переменных окружения
+SENTRY_DSN = os.getenv("SENTRY_DSN", "https://58714683213474f3dc910effbffda5e3@o4509786424541184.ingest.de.sentry.io/4509786456588368")
+SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "development")
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0"))
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    environment=SENTRY_ENVIRONMENT,
+    traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
+
 # --- 6. Основное приложение FastAPI ---
 app = FastAPI(
     title="EduAnalytics AI API",
@@ -146,6 +163,7 @@ students_router = APIRouter(prefix="/students", tags=["students"])
 groups_router = APIRouter(prefix="/groups", tags=["groups"])
 users_router = APIRouter(prefix="/users", tags=["users"])
 grades_router = APIRouter(prefix="/grades", tags=["grades"])
+sentry_router = APIRouter(prefix="/sentry", tags=["sentry"])
 
 async def init_db():
     async with engine.begin() as conn:
@@ -550,12 +568,25 @@ async def create_grade(
 async def health_check():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+# Тестовый эндпоинт для Sentry
+@sentry_router.get("/test")
+async def test_sentry():
+    try:
+        # Генерируем ошибку для тестирования Sentry
+        1 / 0
+    except Exception as e:
+        # Отправляем ошибку в Sentry
+        sentry_sdk.capture_exception(e)
+        # Возвращаем сообщение пользователю
+        return {"message": "Тестовая ошибка отправлена в Sentry!"}
+
 # --- Регистрация роутеров ---
 api_router.include_router(auth_router)
 api_router.include_router(students_router)
 api_router.include_router(groups_router)
 api_router.include_router(users_router)
 api_router.include_router(grades_router)
+api_router.include_router(sentry_router)
 app.include_router(api_router)
 
 # ПРАВИЛЬНЫЙ КОД

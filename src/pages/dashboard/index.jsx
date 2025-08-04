@@ -9,6 +9,7 @@ import KPICard from './components/KPICard';
 import ActivityChart from './components/ActivityChart';
 import QuickActions from './components/QuickActions';
 import RecentActivity from './components/RecentActivity';
+import SentryTest from '../../components/SentryTest';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -183,6 +184,10 @@ const Dashboard = () => {
 
           <div className="mb-8">
             <RecentActivity />
+          </div>
+
+          <div className="mb-8">
+            <SentryTest />
           </div>
 
           {/* ... остальная часть компонента без изменений ... */}

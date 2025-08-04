@@ -4,6 +4,7 @@ import React from "react";
 import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
+import * as Sentry from "@sentry/react";
 import Login from "pages/login";
 
 // Импортируем наш новый компонент
@@ -19,7 +20,9 @@ import MonitoringPage from "pages/MonitoringPage";
 const Routes = () => {
   return (
     <BrowserRouter>
-      <ErrorBoundary>
+      <Sentry.ErrorBoundary fallback={({ error, componentStack, resetError }) => (
+        <ErrorBoundary />
+      )}>
         <ScrollToTop />
         <RouterRoutes>
           {/* Роут для страницы входа остается общедоступным */}
@@ -36,7 +39,7 @@ const Routes = () => {
           
           <Route path="*" element={<NotFound />} />
         </RouterRoutes>
-      </ErrorBoundary>
+      </Sentry.ErrorBoundary>
     </BrowserRouter>
   );
 };

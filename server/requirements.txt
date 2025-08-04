@@ -17,3 +17,6 @@ python-jose[cryptography]
 # Зависимость для обработки форм
 python-multipart
 google-generativeai
+
+# Мониторинг ошибок
+sentry-sdk

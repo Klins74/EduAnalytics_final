@@ -1,5 +1,6 @@
 import React from "react";
 import Icon from "./AppIcon";
+import * as Sentry from "@sentry/react";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -13,6 +14,8 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.log("Error caught by ErrorBoundary:", error, errorInfo);
+    // Отправляем ошибку в Sentry
+    Sentry.captureException(error, { extra: errorInfo });
   }
 
   render() {
