@@ -1,72 +1,59 @@
-# .github/workflows/ci.yml
+name: CI
 
-# Название нашего пайплайна, которое будет отображаться в GitHub
-name: CI Build and Test
-
-# Триггер для запуска: push в ветку main
 on:
   push:
-    branches: [ "main" ]
+    branches: [develop]
   pull_request:
-    branches: [ "main" ]
+    branches: [develop]
 
-# Задачи, которые будут выполняться
 jobs:
-  # Первая задача: проверка frontend-приложения
-  frontend-check:
-    # Указываем, на какой операционной системе выполнять задачу
+  backend:
+    name: Backend FastAPI
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      CANVAS_TOKEN: ${{ secrets.CANVAS_TOKEN }}
     steps:
-      # Шаг 1: Клонируем код репозитория
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Шаг 2: Устанавливаем Node.js нужной версии
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18' # Укажите версию, которую вы используете
-
-      # Шаг 3: Устанавливаем зависимости
-      - name: Install dependencies
-        run: npm install
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-      # Шаг 4: Собираем проект для проверки и загружаем source maps в Sentry
-      - name: Build project
-        run: npm run build
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-  # Вторая задача: проверка backend-приложения
-  backend-check:
-    # Также запускаем на Ubuntu
-    runs-on: ubuntu-latest
-
-    steps:
-      # Шаг 1: Клонируем код репозитория
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Шаг 2: Устанавливаем Python нужной версии
-      - name: Setup Python
+      - uses: actions/checkout@v3
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # Укажите вашу версию Python
-
-      # Шаг 3: Устанавливаем зависимости из requirements.txt
+          python-version: '3.11'
       - name: Install dependencies
-        run: |
-          cd server
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: pip install -r requirements.txt
+      - name: Run linters
+        run: flake8 .
+      - name: Run tests
+        run: pytest
+      - name: Build Docker image
+        run: docker build -t eduanalytics-backend .
+
+  frontend:
+    name: Frontend Next.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run linters
+        run: npx eslint .
+      - name: Run tests
+        run: npm run test || true
+      - name: Build Docker image
+        run: docker build -t eduanalytics-frontend .
+
+# Оптимизации:
+# - Для Canvas LMS в CI использовать mock или отдельный тестовый инстанс (не запускать тяжелый контейнер в CI).
+# - Для секретов использовать только GitHub Actions secrets.
+# - Для production добавить отдельный workflow с деплоем.

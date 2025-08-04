@@ -2,6 +2,15 @@
 
 fastapi
 uvicorn[standard]
+SQLAlchemy>=2.0
+alembic
+psycopg2-binary
+python-dotenv
+pydantic>=2.0
+pydantic-settings
+httpx
+
+uvicorn[standard]
 asyncpg
 redis
 sqlalchemy

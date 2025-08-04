@@ -1,3 +1,5 @@
+// vite.config.mjs
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -6,7 +8,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   //base: "/eduanalytics_ai/", // Важно для GitHub Pages
   build: {
-    outDir: "build",           // Изменён выходной каталог
+    outDir: "build",         // Изменён выходной каталог
     chunkSizeWarningLimit: 2000,
   },
   plugins: [tsconfigPaths(), react()],
@@ -14,5 +16,12 @@ export default defineConfig({
     port: "4028",
     host: "0.0.0.0",
     strictPort: true
-  }
+  },
+  
+  // --- ДОБАВЛЕННЫЙ БЛОК ДЛЯ VITEST ---
+  test: {
+    globals: true,
+    environment: 'jsdom',
+  },
+  // --- КОНЕЦ ДОБАВЛЕННОГО БЛОКА ---
 });

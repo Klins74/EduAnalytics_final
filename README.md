@@ -84,3 +84,96 @@ npm start
 ## Лицензия
 
 MIT
+
+# EduAnalytics Monorepo (Stage 0)
+
+## Структура
+- `eduanalytics-backend` — FastAPI backend (будет вынесен в отдельный репозиторий)
+- `eduanalytics-frontend` — Next.js frontend (будет вынесен в отдельный репозиторий)
+- `docker-compose.yml` — локальная dev-среда для одновременного запуска всех сервисов
+
+## Шаги разделения репозиториев
+1. Создать два отдельных репозитория на GitHub:
+   - `eduanalytics-backend`
+   - `eduanalytics-frontend`
+2. Перенести содержимое папки `server` в новый репозиторий `eduanalytics-backend`.
+3. Перенести содержимое папки `src` и frontend-конфиги в новый репозиторий `eduanalytics-frontend`.
+4. В каждом репозитории добавить:
+   - README.md с описанием
+   - .gitignore (Python для backend, Node для frontend)
+   - LICENSE (MIT или другая)
+5. В корне каждого репозитория создать `.github/workflows/ci.yml` для CI/CD.
+
+## Пример .gitignore для backend (Python)
+```
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.env.*
+
+# VSCode
+.vscode/
+
+# Docker
+*.db
+*.sqlite3
+
+# Alembic
+alembic/versions/
+```
+
+## Пример .gitignore для frontend (Node)
+```
+# Node
+node_modules/
+.next/
+dist/
+.env
+.env.*
+
+# VSCode
+.vscode/
+```
+
+## Итог
+- Два отдельных репозитория с чистой структурой, готовые к CI/CD и дальнейшей настройке инфраструктуры.
+
+## Canvas LMS в Docker
+
+### Шаги запуска:
+1. Убедитесь, что в .env заданы переменные CANVAS_SECRET_KEY, CANVAS_LMS_DOMAIN, CANVAS_LMS_REDIS_URL, CANVAS_LMS_ELASTICSEARCH_URL, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB.
+2. Запустите команду:
+   ```sh
+   docker-compose up canvas db cache elasticsearch
+   ```
+3. Canvas LMS будет доступен на http://localhost:8080
+4. Для инициализации Canvas LMS используйте официальную документацию: https://github.com/instructure/canvas-lms
+
+## Управление секретами и переменными окружения
+
+### Шаги:
+1. Все секреты (CANVAS_TOKEN, DB_URL, JWT_SECRET и др.) должны храниться только в `.env` (или `.env.local` для локальной разработки).
+2. Пример файла `.env.example` всегда должен быть актуальным и не содержать реальных секретов.
+3. Для production рекомендуется использовать Secret Manager (AWS Secrets Manager, HashiCorp Vault, GCP Secret Manager) или GitHub Actions Encrypted Secrets.
+4. Для CI/CD:
+   - В GitHub Actions использовать secrets для передачи переменных в workflow:
+     ```yaml
+     env:
+       DB_URL: ${{ secrets.DB_URL }}
+       JWT_SECRET: ${{ secrets.JWT_SECRET }}
+       CANVAS_TOKEN: ${{ secrets.CANVAS_TOKEN }}
+     ```
+   - Не хранить секреты в репозитории!
+
+### Возможные узкие места и альтернативы:
+- **Человеческий фактор**: случайная публикация .env — добавить `.env*` в .gitignore.
+- **Масштабируемость**: для multi-env использовать разные файлы `.env.production`, `.env.staging` и переменные окружения в CI/CD.
+- **Альтернатива**: для локальной разработки можно использовать dotenv-vault или аналогичные инструменты для шифрования .env.
+
+### Масштабируемость:
+- Для production — централизованное хранилище секретов, автоматическая ротация ключей, аудит доступа.
+
+- Для продакшена вынести Canvas LMS, Redis, Elasticsearch и PostgreSQL в отдельные управляемые сервисы (например, AWS RDS, Elasticache, Elastic Cloud).
+- Использовать Docker Compose override для production/dev.

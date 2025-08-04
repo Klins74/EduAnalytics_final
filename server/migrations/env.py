@@ -16,12 +16,17 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# --- CORRECTED PART ---
-# Import your Base model from your main application file.
-# This is crucial for autogenerate to find your tables.
-from main import Base
+# --- UPDATED FOR EDUANALYTICS ---
+import os
+from dotenv import load_dotenv
+from app.core.config import settings
+from app.db.base import Base
+
 target_metadata = Base.metadata
-# --- END CORRECTION ---
+
+# Set SQLALCHEMY_DATABASE_URL from .env
+config.set_main_option("sqlalchemy.url", settings.get_db_url())
+# --- END UPDATE ---
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

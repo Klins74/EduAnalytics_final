@@ -2,24 +2,62 @@
 
 services:
   # Бэкенд сервис на FastAPI
-  backend:
+  api:
     build: ./server
     env_file: ./.env
-    container_name: eduanalytics_backend
+    container_name: eduanalytics_api
     command: >
-      sh -c "alembic upgrade head && 
+      sh -c "alembic upgrade head && \
       uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./server:/app
     ports:
       - "8000:8000"
     environment:
-      - SENTRY_DSN=https://58714683213474f3dc910effbffda5e3@o4509786424541184.ingest.de.sentry.io/4509786456588368
+      - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-1.0}
     depends_on:
       db:
         condition: service_healthy
+      cache:
+        condition: service_started
+
+  # Фронтенд сервис на Next.js
+  ui:
+    build: .
+    container_name: eduanalytics_ui
+    env_file: ./.env
+    working_dir: /app
+    command: "npm run dev"
+    volumes:
+      - ./src:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  # Canvas LMS (официальный образ)
+  canvas:
+    image: instructure/canvas-lms:stable
+    container_name: eduanalytics_canvas
+    env_file: ./.env
+    environment:
+      - CANVAS_LMS_POSTGRES_USER=user
+      - CANVAS_LMS_POSTGRES_PASSWORD=password
+      - CANVAS_LMS_POSTGRES_DB=canvas
+      - CANVAS_LMS_REDIS_URL=redis://cache:6379/0
+      - CANVAS_LMS_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CANVAS_LMS_DOMAIN=localhost
+      - CANVAS_LMS_SECRET_KEY=${CANVAS_SECRET_KEY}
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+      - cache
+      - elasticsearch
+    volumes:
+      - canvas_data:/var/canvas
 
   # Сервис базы данных PostgreSQL
   db:
@@ -30,12 +68,11 @@ services:
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=eduanalytics_db
+      - POSTGRES_DB=canvas
     ports:
       - "5432:5432"
     healthcheck:
-      # --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Добавляем имя базы данных ---
-      test: ["CMD-SHELL", "pg_isready -U user -d eduanalytics_db"]
+      test: ["CMD-SHELL", "pg_isready -U user -d canvas"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -47,5 +84,19 @@ services:
     ports:
       - "6379:6379"
 
+  # Elasticsearch для Canvas LMS
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: eduanalytics_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
 volumes:
   postgres_data:
+  canvas_data:
+  elasticsearch_data:
