@@ -26,9 +26,9 @@ jobs:
       - name: Build project
         run: npm run build
       
-      # --- НОВЫЙ ШАГ ---
       - name: Run tests
-        run: npm test -- --watchAll=false # Запускаем тесты без watch-режима
+        # Исправлена команда для запуска vitest
+        run: npm test 
 
   backend-check:
     runs-on: ubuntu-latest
@@ -48,7 +48,6 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx # Устанавливаем pytest для тестов
 
-      # --- НОВЫЙ ШАГ ---
       - name: Run tests
         run: |
           cd server
