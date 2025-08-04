@@ -1,0 +1,60 @@
+# .github/workflows/ci.yml
+
+# Название нашего пайплайна, которое будет отображаться в GitHub
+name: CI Build and Test
+
+# Триггер для запуска: push в ветку main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Задачи, которые будут выполняться
+jobs:
+  # Первая задача: проверка frontend-приложения
+  frontend-check:
+    # Указываем, на какой операционной системе выполнять задачу
+    runs-on: ubuntu-latest
+
+    steps:
+      # Шаг 1: Клонируем код репозитория
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Шаг 2: Устанавливаем Node.js нужной версии
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Укажите версию, которую вы используете
+
+      # Шаг 3: Устанавливаем зависимости
+      - name: Install dependencies
+        run: npm install
+
+      # Шаг 4: Собираем проект для проверки
+      - name: Build project
+        run: npm run build
+
+  # Вторая задача: проверка backend-приложения
+  backend-check:
+    # Также запускаем на Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      # Шаг 1: Клонируем код репозитория
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Шаг 2: Устанавливаем Python нужной версии
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # Укажите вашу версию Python
+
+      # Шаг 3: Устанавливаем зависимости из requirements.txt
+      - name: Install dependencies
+        run: |
+          cd server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
