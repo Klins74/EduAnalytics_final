@@ -231,15 +231,9 @@ async def on_startup():
     await init_db()
 
 # --- Настройка CORS ---
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

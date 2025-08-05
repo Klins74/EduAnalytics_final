@@ -1,6 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import users
-from app.api.routes import group, student
+from app.api.v1.routes import users, group, student, auth
 
 app = FastAPI(title="EduAnalytics API")
 
@@ -10,6 +9,7 @@ app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(group.router, prefix="/api/groups", tags=["Groups"])
 # Подключение маршрутов студентов
 app.include_router(student.router, prefix="/api/students", tags=["Students"])
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 # Health check endpoint
 @app.get("/", tags=["Health Check"])
