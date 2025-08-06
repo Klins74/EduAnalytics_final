@@ -15,7 +15,7 @@ async def test_root():
 async def test_get_token():
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://127.0.0.1:8000/auth/token",
+            f"{BASE_URL}/auth/token",
             data={"username": "admin@example.com", "password": "admin"},
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
@@ -27,7 +27,7 @@ async def test_get_token():
 async def test_protected_endpoint():
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://127.0.0.1:8000/auth/token",
+            f"{BASE_URL}/auth/token",
             data={"username": "admin@example.com", "password": "admin"},
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )

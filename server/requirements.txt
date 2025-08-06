@@ -15,6 +15,7 @@ asyncpg
 redis
 sqlalchemy
 alembic
+pytest-asyncio
 
 # Зависимости для БД, паролей и токенов
 python-dotenv

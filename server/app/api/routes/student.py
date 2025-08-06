@@ -71,7 +71,10 @@ async def create_student(student_in: StudentCreate, session: AsyncSession = Depe
     - Позволяет указать group_id для привязки к группе
     - Возвращает созданного студента
     """
-    return await crud_student.create_student(session, student_in)
+    try:
+        return await crud_student.create_student(session, student_in)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.put(
     "/{student_id}",

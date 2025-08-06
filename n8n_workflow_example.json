@@ -1,0 +1,429 @@
+{
+  "name": "EduAnalytics Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduanalytics-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "eduanalytics-notifications"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.event_type}}",
+              "operation": "equal",
+              "value2": "deadline_approaching"
+            }
+          ]
+        }
+      },
+      "id": "deadline-filter",
+      "name": "Deadline Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.event_type}}",
+              "operation": "equal",
+              "value2": "grade_created"
+            }
+          ]
+        }
+      },
+      "id": "grade-filter",
+      "name": "Grade Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.event_type}}",
+              "operation": "equal",
+              "value2": "feedback_created"
+            }
+          ]
+        }
+      },
+      "id": "feedback-filter",
+      "name": "Feedback Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.event_type}}",
+              "operation": "contains",
+              "value2": "schedule"
+            }
+          ]
+        }
+      },
+      "id": "schedule-filter",
+      "name": "Schedule Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "https://api.emailjs.com/api/v1.0/email/send",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "service_id",
+              "value": "your_service_id"
+            },
+            {
+              "name": "template_id",
+              "value": "deadline_template"
+            },
+            {
+              "name": "user_id",
+              "value": "your_user_id"
+            },
+            {
+              "name": "template_params",
+              "value": "={\"student_name\": \"{{$json.student_name}}\", \"assignment_title\": \"{{$json.assignment_title}}\", \"due_date\": \"{{$json.due_date}}\", \"days_remaining\": \"{{$json.days_remaining}}\"}"
+            }
+          ]
+        }
+      },
+      "id": "deadline-email",
+      "name": "Send Deadline Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 120]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.student_telegram_id}}",
+        "text": "🚨 Напоминание о дедлайне!\n\nЗадание: {{$json.assignment_title}}\nДо сдачи осталось: {{$json.days_remaining}} дн.\nДата сдачи: {{$json.due_date}}\n\nНе забудьте сдать работу вовремя!"
+      },
+      "id": "deadline-telegram",
+      "name": "Send Deadline Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "https://api.emailjs.com/api/v1.0/email/send",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "service_id",
+              "value": "your_service_id"
+            },
+            {
+              "name": "template_id",
+              "value": "grade_template"
+            },
+            {
+              "name": "user_id",
+              "value": "your_user_id"
+            },
+            {
+              "name": "template_params",
+              "value": "={\"student_name\": \"{{$json.student_name}}\", \"assignment_title\": \"{{$json.assignment_title}}\", \"grade_value\": \"{{$json.grade_value}}\", \"teacher_name\": \"{{$json.teacher_name}}\"}"
+            }
+          ]
+        }
+      },
+      "id": "grade-email",
+      "name": "Send Grade Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 280]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.student_telegram_id}}",
+        "text": "📊 Новая оценка!\n\nЗадание: {{$json.assignment_title}}\nОценка: {{$json.grade_value}}\nПреподаватель: {{$json.teacher_name}}\n\n{{$json.comment ? 'Комментарий: ' + $json.comment : ''}}"
+      },
+      "id": "grade-telegram",
+      "name": "Send Grade Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "https://api.emailjs.com/api/v1.0/email/send",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "service_id",
+              "value": "your_service_id"
+            },
+            {
+              "name": "template_id",
+              "value": "feedback_template"
+            },
+            {
+              "name": "user_id",
+              "value": "your_user_id"
+            },
+            {
+              "name": "template_params",
+              "value": "={\"student_name\": \"{{$json.student_name}}\", \"submission_title\": \"{{$json.submission_title}}\", \"author_name\": \"{{$json.author_name}}\", \"feedback_text\": \"{{$json.feedback_text}}\"}"
+            }
+          ]
+        }
+      },
+      "id": "feedback-email",
+      "name": "Send Feedback Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 440]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "https://api.emailjs.com/api/v1.0/email/send",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "service_id",
+              "value": "your_service_id"
+            },
+            {
+              "name": "template_id",
+              "value": "schedule_template"
+            },
+            {
+              "name": "user_id",
+              "value": "your_user_id"
+            },
+            {
+              "name": "template_params",
+              "value": "={\"course_name\": \"{{$json.course_name}}\", \"schedule_date\": \"{{$json.schedule_date}}\", \"start_time\": \"{{$json.start_time}}\", \"location\": \"{{$json.location}}\"}"
+            }
+          ]
+        }
+      },
+      "id": "schedule-email",
+      "name": "Send Schedule Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 520]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"message\": \"Notification processed\"}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "deadline-filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "grade-filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "feedback-filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "schedule-filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deadline-filter": {
+      "main": [
+        [
+          {
+            "node": "deadline-email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "deadline-telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "grade-filter": {
+      "main": [
+        [
+          {
+            "node": "grade-email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "grade-telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "feedback-filter": {
+      "main": [
+        [
+          {
+            "node": "feedback-email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule-filter": {
+      "main": [
+        [
+          {
+            "node": "schedule-email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deadline-email": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deadline-telegram": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "grade-email": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "grade-telegram": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "feedback-email": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "schedule-email": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Europe/Moscow"
+  },
+  "versionId": "1"
+}

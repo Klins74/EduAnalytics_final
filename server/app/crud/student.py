@@ -53,11 +53,21 @@ async def create_student(db: AsyncSession, student_in: StudentCreate) -> Student
     :param student_in: Данные для создания студента
     :return: Созданный объект Student
     """
-    student = Student(**student_in.dict())
+    # Проверяем, что email уникален
+    existing_student = await get_student_by_email(db, student_in.email)
+    if existing_student:
+        raise ValueError(f"Student with email {student_in.email} already exists")
+    
+    student = Student(**student_in.model_dump())
     db.add(student)
     await db.commit()
     await db.refresh(student)
-    return student
+    
+    # Загружаем студента с группой
+    result = await db.execute(
+        select(Student).options(selectinload(Student.group)).where(Student.id == student.id)
+    )
+    return result.scalar_one()
 
 async def update_student(db: AsyncSession, student_id: int, student_in: StudentUpdate) -> Optional[Student]:
     """
@@ -71,7 +81,7 @@ async def update_student(db: AsyncSession, student_id: int, student_in: StudentU
     student = result.scalar_one_or_none()
     if not student:
         return None
-    update_data = student_in.dict(exclude_unset=True)
+    update_data = student_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(student, key, value)
     db.add(student)

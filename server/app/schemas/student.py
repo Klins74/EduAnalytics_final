@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from app.schemas.group import GroupRead
 
 class StudentBase(BaseModel):
@@ -18,5 +18,4 @@ class StudentRead(StudentBase):
     id: int
     group: GroupRead | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
