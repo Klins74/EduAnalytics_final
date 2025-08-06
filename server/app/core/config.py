@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     CANVAS_TOKEN: str
     JWT_SECRET: str
 
-
+    # --- Notification settings ---
+    ENABLE_NOTIFICATIONS: bool = True
+    WEBHOOK_URL: str = "http://localhost:5678/webhook/eduanalytics-webhook"
+    WEBHOOK_TIMEOUT: int = 10
+    DEADLINE_CHECK_ENABLED: bool = True
+    DEADLINE_CHECK_INTERVAL: int = 3600
+    DEADLINE_NOTIFICATION_DAYS: int = 3
 
 settings = Settings()

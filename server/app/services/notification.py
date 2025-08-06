@@ -6,6 +6,7 @@ from datetime import datetime
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+import json
 
 
 class NotificationService:
@@ -283,3 +284,34 @@ def send_submission_notification(
             submission_status=submission_status
         )
     )
+
+
+    def send_webhook(self, event_type, data, user_id=None, channels=None):
+        payload = {
+            "event_type": event_type,
+            "data": data,
+            "user_id": user_id,
+            "channels": channels
+        }
+        try:
+            response = httpx.post(self.n8n_webhook_url, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+            logging.info(json.dumps({
+                "event": "notification_sent",
+                "event_type": event_type,
+                "user_id": user_id,
+                "channels": channels,
+                "status": "success",
+                "code": response.status_code
+            }))
+            return True
+        except Exception as e:
+            logging.error(json.dumps({
+                "event": "notification_failed",
+                "event_type": event_type,
+                "user_id": user_id,
+                "channels": channels,
+                "status": "error",
+                "error": str(e)
+            }))
+            return False

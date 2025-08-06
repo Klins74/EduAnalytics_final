@@ -196,6 +196,52 @@ class CRUDFeedback:
         
         await db.flush()
         await db.refresh(db_feedback)
+        # Отправляем уведомление об обновлении комментария
+        try:
+            notification_service = NotificationService()
+            # Получаем информацию о пользователе и submission
+            user_result = await db.execute(select(User).filter(User.id == current_user_id))
+            user = user_result.scalar_one_or_none()
+            submission_result = await db.execute(
+                select(Submission)
+                .options(joinedload(Submission.assignment).joinedload(Assignment.course))
+                .filter(Submission.id == db_feedback.submission_id)
+            )
+            submission = submission_result.scalar_one_or_none()
+            student_info = None
+            if submission and submission.student_id:
+                student_result = await db.execute(
+                    select(Student, User)
+                    .join(User, Student.user_id == User.id)
+                    .filter(Student.id == submission.student_id)
+                )
+                student_data = student_result.first()
+                if student_data:
+                    student, student_user = student_data
+                    student_info = {
+                        "name": f"{student.first_name} {student.last_name}",
+                        "email": student_user.username,
+                        "id": student.id
+                    }
+            webhook_data = {
+                "event_type": "feedback_updated",
+                "feedback_id": db_feedback.id,
+                "submission_id": db_feedback.submission_id,
+                "author_name": user.username if user else None,
+                "author_id": user.id if user else None,
+                "feedback_text": db_feedback.text[:500],
+                "submission_title": getattr(submission.assignment, 'title', None) if submission and submission.assignment else None,
+                "student_name": student_info["name"] if student_info else None,
+                "student_id": student_info["id"] if student_info else None,
+                "student_email": student_info["email"] if student_info else None,
+                "course_name": getattr(submission.assignment.course, 'name', None) if submission and submission.assignment else None,
+                "channels": ["email"]
+            }
+            await notification_service.send_webhook(webhook_data)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Ошибка отправки уведомления об обновлении комментария {feedback_id}: {str(e)}")
         return db_feedback
 
     async def delete_feedback(
