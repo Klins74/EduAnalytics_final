@@ -11,7 +11,10 @@ logger = logging.getLogger(__name__)
 class NotificationService:
     """Сервис для отправки уведомлений через n8n webhook."""
     
-    def __init__(self):
+    def __init__(self, settings=None):
+        if settings is None:
+            from app.core.config import settings as default_settings
+            settings = default_settings
         self.n8n_webhook_url = getattr(settings, 'N8N_WEBHOOK_URL', None)
         self.timeout = 10.0
     
@@ -146,7 +149,12 @@ class NotificationService:
         instructor_name: str,
         change_type: str,
         students: list,
-        old_data: dict = None
+        old_data: dict = None,
+        lesson_type: str = None,
+        description: str = None,
+        notes: str = None,
+        is_cancelled: bool = None,
+        classroom_id: int = None
     ) -> bool:
         """Отправить уведомление об изменении расписания."""
         data = {
@@ -162,6 +170,11 @@ class NotificationService:
             "change_type": change_type,
             "students": students,
             "old_data": old_data,
+            "lesson_type": lesson_type,
+            "description": description,
+            "notes": notes,
+            "is_cancelled": is_cancelled,
+            "classroom_id": classroom_id,
             "channels": ["email"]
         }
         
@@ -187,6 +200,37 @@ class NotificationService:
         }
         
         return await self.send_webhook_legacy("submission_created", data)
+
+    def send_webhook_sync(self, data: dict) -> bool:
+        """Synchronous wrapper for send_webhook."""
+        import asyncio
+        return asyncio.run(self.send_webhook(data))
+
+    def send_deadline_notification_sync(
+        self,
+        assignment_id: int,
+        assignment_title: str,
+        due_date: str,
+        course_name: str,
+        course_id: int,
+        hours_remaining: int,
+        students: list
+    ) -> bool:
+        """Synchronous wrapper for send_deadline_notification."""
+        import asyncio
+        return asyncio.run(self.send_deadline_notification(
+            assignment_id,
+            assignment_title,
+            due_date,
+            course_name,
+            course_id,
+            hours_remaining,
+            students
+        ))
+
+    @property
+    def webhook_url(self):
+        return self.n8n_webhook_url
 
 
 # Создаем глобальный экземпляр сервиса

@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from app.core.config import settings
 from app.db.base import Base
 # Import all model modules so Alembic can detect them
-from app.models import user, group, student, grade
+from app.models import user, group, student, grade, course, assignment, submission, gradebook, feedback, schedule
 
 target_metadata = Base.metadata
 

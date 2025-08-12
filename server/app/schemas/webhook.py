@@ -84,6 +84,11 @@ class ScheduleNotificationData(BaseModel):
     location: str = Field(..., description="Место проведения")
     instructor_name: str = Field(..., description="Имя преподавателя")
     change_type: str = Field(..., description="Тип изменения (created, updated, deleted)")
+    lesson_type: Optional[str] = Field(None, description="Тип занятия")
+    description: Optional[str] = Field(None, description="Описание занятия")
+    notes: Optional[str] = Field(None, description="Дополнительные заметки")
+    is_cancelled: Optional[bool] = Field(None, description="Отменено ли занятие")
+    classroom_id: Optional[int] = Field(None, description="ID аудитории")
     students: List[Dict[str, Any]] = Field(
         default_factory=list, 
         description="Список студентов для уведомления"

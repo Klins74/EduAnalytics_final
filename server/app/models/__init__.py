@@ -7,4 +7,4 @@ from .assignment import Assignment
 from .submission import Submission
 from .gradebook import GradebookEntry, GradebookHistory
 from .feedback import Feedback
-from .schedule import Schedule
+from .schedule import Schedule, Event, Classroom

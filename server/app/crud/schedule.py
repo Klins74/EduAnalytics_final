@@ -233,7 +233,12 @@ class CRUDSchedule:
             'schedule_date': schedule.schedule_date,
             'start_time': schedule.start_time,
             'end_time': schedule.end_time,
-            'location': schedule.location
+            'location': schedule.location,
+            'lesson_type': schedule.lesson_type,
+            'description': schedule.description,
+            'notes': schedule.notes,
+            'is_cancelled': bool(schedule.is_cancelled),
+            'classroom_id': schedule.classroom_id
         }
         
         for field, value in update_data.items():
@@ -332,51 +337,31 @@ class CRUDSchedule:
             
             # Формируем данные для webhook
             notification_service = NotificationService()
-            
-            webhook_data = {
-                "event_type": "schedule_created" if is_new else "schedule_updated",
-                "schedule_id": schedule.id,
-                "course_name": course.name,
-                "course_id": schedule.course_id,
-                "instructor_name": instructor.username if instructor else None,
-                "instructor_id": schedule.instructor_id,
-                "schedule_date": schedule.schedule_date.isoformat(),
-                "start_time": schedule.start_time.isoformat(),
-                "end_time": schedule.end_time.isoformat(),
-                "location": schedule.location,
-                "description": schedule.description,
-                "students": students_data,
-                "changed_by": current_user.username,
-                "changed_by_id": current_user.id,
-                "channels": ["email"]
-            }
-            
-            # Добавляем информацию об изменениях для обновлений
-            if not is_new and old_values:
+            change_type = "created" if is_new else "updated"
+            old_data = None
+            changes = None
+            if not is_new and old_values is not None:
+                # Определяем измененные поля
                 changes = {}
-                if old_values['schedule_date'] != schedule.schedule_date:
-                    changes['date'] = {
-                        'old': old_values['schedule_date'].isoformat(),
-                        'new': schedule.schedule_date.isoformat()
-                    }
-                if old_values['start_time'] != schedule.start_time:
-                    changes['start_time'] = {
-                        'old': old_values['start_time'].isoformat(),
-                        'new': schedule.start_time.isoformat()
-                    }
-                if old_values['end_time'] != schedule.end_time:
-                    changes['end_time'] = {
-                        'old': old_values['end_time'].isoformat(),
-                        'new': schedule.end_time.isoformat()
-                    }
-                if old_values['location'] != schedule.location:
-                    changes['location'] = {
-                        'old': old_values['location'],
-                        'new': schedule.location
-                    }
-                webhook_data['changes'] = changes
+                for key, old_val in old_values.items():
+                    new_val = getattr(schedule, key, None)
+                    if str(old_val) != str(new_val):
+                        changes[key] = {"old": old_val, "new": new_val}
+                old_data = old_values
             
-            await notification_service.send_webhook(webhook_data)
+            await notification_service.send_schedule_notification(
+                schedule_id=schedule.id,
+                course_name=course.name if course else None,
+                course_id=schedule.course_id,
+                schedule_date=str(schedule.schedule_date),
+                start_time=str(schedule.start_time),
+                end_time=str(schedule.end_time),
+                location=schedule.location,
+                instructor_name=f"{instructor.first_name} {instructor.last_name}" if instructor else None,
+                change_type=change_type,
+                students=students_data,
+                old_data={"old_values": old_data, "changes": changes}
+            )
             
         except Exception as e:
             logger.error(f"Ошибка отправки уведомления о расписании: {str(e)}")

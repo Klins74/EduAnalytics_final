@@ -1,8 +1,20 @@
 from datetime import date, time, datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, ConfigDict
+from enum import Enum
 from app.schemas.user import UserRead
 from app.schemas.course import CourseRead
+
+
+class LessonType(str, Enum):
+    """Типы занятий."""
+    LECTURE = "lecture"
+    SEMINAR = "seminar"
+    LABORATORY = "laboratory"
+    PRACTICAL = "practical"
+    EXAM = "exam"
+    CONSULTATION = "consultation"
+    OTHER = "other"
 
 
 class ScheduleBase(BaseModel):
@@ -13,6 +25,11 @@ class ScheduleBase(BaseModel):
     end_time: time = Field(..., json_schema_extra={"example": "10:30:00"}, description="Время окончания")
     location: Optional[str] = Field(None, max_length=200, json_schema_extra={"example": "Аудитория 101"}, description="Место проведения")
     instructor_id: int = Field(..., json_schema_extra={"example": 1}, description="ID преподавателя")
+    lesson_type: LessonType = Field(default=LessonType.LECTURE, description="Тип занятия")
+    description: Optional[str] = Field(None, description="Описание занятия, тема")
+    notes: Optional[str] = Field(None, description="Дополнительные заметки")
+    is_cancelled: bool = Field(default=False, description="Отменено ли занятие")
+    classroom_id: Optional[int] = Field(None, description="ID аудитории")
     
     @field_validator('end_time')
     def validate_times(cls, v, info):
@@ -35,6 +52,11 @@ class ScheduleUpdate(BaseModel):
     end_time: Optional[time] = None
     location: Optional[str] = Field(None, max_length=200)
     instructor_id: Optional[int] = None
+    lesson_type: Optional[LessonType] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    is_cancelled: Optional[bool] = None
+    classroom_id: Optional[int] = None
     
     @field_validator('end_time')
     def validate_times(cls, v, info):
@@ -42,6 +64,42 @@ class ScheduleUpdate(BaseModel):
         if 'start_time' in info.data and info.data['start_time'] and v and v <= info.data['start_time']:
             raise ValueError('Время окончания должно быть больше времени начала')
         return v
+
+
+class ClassroomBase(BaseModel):
+    name: str
+    building: Optional[str] = None
+    floor: Optional[int] = None
+    capacity: Optional[int] = None
+    equipment: Optional[str] = Field(None, description="JSON строка с оборудованием")
+    is_available: bool = True
+
+
+class ClassroomRead(ClassroomBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    event_date: date
+    start_time: time
+    end_time: time
+    location: Optional[str] = None
+    organizer_id: int
+    is_public: bool = True
+
+
+class EventRead(EventBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ScheduleRead(ScheduleBase):
@@ -61,6 +119,11 @@ class ScheduleRead(ScheduleBase):
             "end_time": "10:30:00",
             "location": "Аудитория 101",
             "instructor_id": 1,
+            "lesson_type": "lecture",
+            "description": "Введение в нейронные сети",
+            "notes": "Принести тетрадь",
+            "is_cancelled": False,
+            "classroom_id": 2,
             "created_at": "2024-01-15T10:00:00",
             "updated_at": "2024-01-15T10:00:00",
             "course": {
