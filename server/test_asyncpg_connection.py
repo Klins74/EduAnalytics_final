@@ -1,13 +1,13 @@
-import asyncpg
 import asyncio
+import asyncpg
 
-async def ignore_test_connection(): # Переименовано, чтобы pytest не запускал его
+async def test():
     try:
-        conn = await asyncpg.connect('postgresql://postgres:postgres@localhost:5432/eduanalytics')
-        print('Connection successful')
+        conn = await asyncpg.connect(user='edua', password='secret', database='eduanalytics', host='localhost', port=5432)
+        print('Connected successfully')
         await conn.close()
     except Exception as e:
         print('Connection failed:', e)
 
 if __name__ == "__main__":
-    asyncio.run(ignore_test_connection())
+    asyncio.run(test())

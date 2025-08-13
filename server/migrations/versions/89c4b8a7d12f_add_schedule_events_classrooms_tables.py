@@ -47,6 +47,18 @@ def upgrade() -> None:
             op.create_index(op.f('ix_classrooms_name'), 'classrooms', ['name'], unique=True)
 
     # --- Schedules table ---
+    # Надёжное создание ENUM lessontype (идемпотентно, вне транзакции)
+    import psycopg2
+    import os
+    db_url = os.getenv("DATABASE_URL") or "postgresql://edua:secret@db:5432/eduanalytics"
+    try:
+        with psycopg2.connect(db_url, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM pg_type WHERE typname = 'lessontype'")
+                if cur.fetchone() is None:
+                    cur.execute("CREATE TYPE lessontype AS ENUM ('lecture', 'seminar', 'laboratory', 'practical', 'exam', 'consultation', 'other')")
+    except Exception as e:
+        print(f"[Alembic ENUM] {e}")
     if not insp.has_table('schedules'):
         op.create_table(
             'schedules',

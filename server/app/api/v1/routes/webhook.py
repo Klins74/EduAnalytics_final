@@ -16,7 +16,7 @@ from app.schemas.webhook import (
     ScheduleNotificationData
 )
 from app.services.notification import NotificationService
-from app.core.auth import get_current_user
+from app.core.security import get_current_user
 from app.models.user import User
 
 router = APIRouter()

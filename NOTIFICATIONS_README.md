@@ -206,6 +206,30 @@ checker.check_single_assignment(assignment_id=1)
 
 ## Мониторинг и отладка
 
+## Мониторинг и логирование
+
+Все события уведомлений и фоновых задач логируются в структурированном формате (JSON) в файл `notifications.log` и stdout. Примеры логов:
+
+```json
+{"event": "notification_sent", "event_type": "feedback_created", "user_id": 123, "channels": ["email"], "status": "success", "code": 200}
+{"event": "notification_failed", "event_type": "deadline_reminder", "user_id": 456, "channels": ["web"], "status": "error", "error": "Timeout"}
+{"event": "deadline_notification", "assignment_id": 789, "user_id": 321, "status": "sent"}
+{"event": "deadline_check_failed", "error": "DB connection error"}
+```
+
+### Метрики и статистика
+- Количество отправленных/неотправленных уведомлений по типам событий
+- Ошибки и сбои доставки
+- Статистика по дедлайнам
+
+## Интеграция настроек
+
+Параметры уведомлений (`ENABLE_NOTIFICATIONS`, `WEBHOOK_URL`, `WEBHOOK_TIMEOUT`, `DEADLINE_CHECK_ENABLED`, `DEADLINE_CHECK_INTERVAL`, `DEADLINE_NOTIFICATION_DAYS`) определяются в `server/app/core/config.py` и используются во всех сервисах.
+
+## Тестирование с n8n
+
+Для интеграционного теста используйте файл `server/tests/test_notification_integration.py` и укажите переменную окружения `N8N_WEBHOOK_URL` для реального инстанса n8n.
+
 ### Логирование
 
 Все уведомления логируются с уровнем INFO/ERROR:

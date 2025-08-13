@@ -2,31 +2,20 @@
 
 fastapi
 uvicorn[standard]
-SQLAlchemy>=2.0
-alembic
-psycopg2-binary
-python-dotenv
-pydantic>=2.0
-pydantic-settings
-httpx
-
-uvicorn[standard]
-asyncpg
-redis
-sqlalchemy
-alembic
-pytest-asyncio
-
-# Зависимости для БД, паролей и токенов
-python-dotenv
-pydantic[email]
-passlib[bcrypt]
-bcrypt==4.0.1 # <-- ИСПРАВЛЕНИЕ: Указываем совместимую версию
-python-jose[cryptography]
-
-# Зависимость для обработки форм
-python-multipart
-google-generativeai
-
-# Мониторинг ошибок
-sentry-sdk
+SQLAlchemy>=1.4.0
+alembic>=1.8.0
+aiosqlite>=0.18.0
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+httpx>=0.24.0
+asyncpg>=0.28.0
+redis>=4.6.0
+pytest-asyncio>=0.21.0
+passlib>=1.7.4
+bcrypt>=4.0.1
+python-jose>=3.3.0
+python-multipart>=0.0.6
+google-generativeai>=0.2.0
+sentry-sdk>=1.39.0

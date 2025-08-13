@@ -13,6 +13,11 @@ from fastapi.responses import JSONResponse
 from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError
 import logging
+from app.core.config import settings
+from app.services.notification import NotificationService
+from app.services.scheduler import start_deadline_scheduler
+import sys
+import json
 
 # Создаем контекст для хеширования пароля
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -71,7 +76,7 @@ app.include_router(gradebook.router, prefix="/api/gradebook", tags=["Gradebook"]
 # Подключение маршрутов комментариев
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
 app.include_router(schedule.router, tags=["Schedule"])
-app.include_router(webhook.router, prefix="/webhook", tags=["Webhook"])
+app.include_router(webhook.router, prefix="/api/v1/n8n", tags=["n8n"])
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 # Health check endpoint
@@ -87,3 +92,26 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors(), "body": exc.body},
     )
 # Для расширения: добавьте middlewares, обработчики ошибок и т.д.
+
+# Настройка структурированного логирования
+logging.basicConfig(
+    level=settings.LOG_LEVEL if hasattr(settings, 'LOG_LEVEL') else logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(getattr(settings, 'LOG_FILE_PATH', 'notifications.log'))
+    ]
+)
+
+notification_service = NotificationService(settings=settings)
+
+# Удаляем устаревший startup_event
+@app.on_event("startup")
+async def startup_event():
+    logging.basicConfig(level=logging.INFO)
+    logging.info("FastAPI startup event triggered.")
+    await create_initial_data()
+    logging.info(json.dumps({"event": "startup", "status": "ok", "db_url": settings.DB_URL, "db_url_sync": getattr(settings, "DB_URL_SYNC", None)}))
+    if settings.DEADLINE_CHECK_ENABLED:
+        start_deadline_scheduler(notification_service, interval=settings.DEADLINE_CHECK_INTERVAL)
+    logging.info(json.dumps({"event": "startup", "status": "ok"}))

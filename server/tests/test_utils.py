@@ -7,6 +7,7 @@ from app.models.course import Course
 from app.models.assignment import Assignment
 from app.models.submission import Submission
 from datetime import datetime, timedelta, timezone
+import logging
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
@@ -14,9 +15,12 @@ engine = create_async_engine(DATABASE_URL, echo=True, future=True)
 TestingAsyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 
 async def init_db():
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Initializing test DB...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+    logging.info("Test DB initialized.")
 
 async def override_get_async_session():
     async with TestingAsyncSessionLocal() as session:

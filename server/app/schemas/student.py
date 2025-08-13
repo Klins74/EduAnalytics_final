@@ -5,6 +5,7 @@ class StudentBase(BaseModel):
     full_name: str
     email: EmailStr
     group_id: int | None = None
+    user_id: int
 
 class StudentCreate(StudentBase):
     pass

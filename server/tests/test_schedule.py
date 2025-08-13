@@ -1,6 +1,8 @@
 import pytest
 import asyncio
-from datetime import datetime, date, time, timedelta
+import datetime
+import time as standard_time
+from datetime import date, timedelta
 from httpx import AsyncClient, ASGITransport
 import sys
 import os
@@ -24,6 +26,7 @@ from tests.test_utils import (
     TestingAsyncSessionLocal,
     override_get_async_session
 )
+import subprocess
 
 def override_get_current_user(user: User):
     def _override():
@@ -98,8 +101,8 @@ async def test_schedule(db_session: AsyncSession, test_course: Course, teacher_u
     schedule = Schedule(
         course_id=test_course.id,
         schedule_date=date.today() + timedelta(days=1),
-        start_time=time(10, 0),
-        end_time=time(11, 30),
+        start_time=datetime.time(10, 0),
+        end_time=datetime.time(11, 30),
         location="Room 101",
         instructor_id=teacher_user.id
     )
@@ -117,8 +120,8 @@ class TestScheduleCRUD:
         schedule_data = ScheduleCreate(
             course_id=test_course.id,
             schedule_date=date.today() + timedelta(days=1),
-            start_time=time(14, 0),
-            end_time=time(15, 30),
+            start_time=datetime.time(14, 0),
+            end_time=datetime.time(15, 30),
             location="Room 202",
             instructor_id=teacher_user.id
         )
@@ -141,8 +144,8 @@ class TestScheduleCRUD:
         schedule_data = ScheduleCreate(
             course_id=test_course.id,
             schedule_date=date.today() + timedelta(days=1),
-            start_time=time(14, 0),
-            end_time=time(15, 30),
+            start_time=datetime.time(14, 0),
+            end_time=datetime.time(15, 30),
             location="Room 202",
             instructor_id=student_user.id
         )
@@ -161,8 +164,8 @@ class TestScheduleCRUD:
         schedule_data = ScheduleCreate(
             course_id=test_course.id,
             schedule_date=test_schedule.schedule_date,
-            start_time=time(10, 30),  # Пересекается с существующим расписанием
-            end_time=time(12, 0),
+            start_time=datetime.time(10, 30),  # Пересекается с существующим расписанием
+            end_time=datetime.time(12, 0),
             location="Аудитория 102",
             instructor_id=test_schedule.instructor_id
         )
@@ -207,8 +210,8 @@ class TestScheduleCRUD:
         """Тест успешного обновления расписания."""
         update_data = ScheduleUpdate(
             location="Updated Room 303",
-            start_time=time(9, 0),
-            end_time=time(10, 30)
+            start_time=datetime.time(9, 0),
+            end_time=datetime.time(10, 30)
         )
         
         updated_schedule = await schedule_crud.update_schedule(
@@ -219,8 +222,8 @@ class TestScheduleCRUD:
         )
         
         assert updated_schedule.location == "Updated Room 303"
-        assert updated_schedule.start_time == time(9, 0)
-        assert updated_schedule.end_time == time(10, 30)
+        assert updated_schedule.start_time == datetime.time(9, 0)
+        assert updated_schedule.end_time == datetime.time(10, 30)
 
     async def test_delete_schedule_success(self, db_session: AsyncSession, test_schedule: Schedule, teacher_user: User):
         """Тест успешного удаления расписания."""
@@ -282,8 +285,8 @@ class TestScheduleAPI:
         schedule_data = {
             "course_id": test_course.id,
             "schedule_date": str(date.today() + timedelta(days=1)),
-            "start_time": "14:00:00",
-            "end_time": "15:30:00",
+            "start_time": datetime.time(14, 0).strftime("%H:%M:%S"),
+            "end_time": datetime.time(15, 30).strftime("%H:%M:%S"),
             "location": "Room 202",
             "instructor_id": teacher_user.id
         }
@@ -302,8 +305,8 @@ class TestScheduleAPI:
         schedule_data = {
             "course_id": test_course.id,
             "schedule_date": str(date.today() + timedelta(days=1)),
-            "start_time": "14:00:00",
-            "end_time": "15:30:00",
+            "start_time": datetime.time(14, 0).strftime("%H:%M:%S"),
+            "end_time": datetime.time(15, 30).strftime("%H:%M:%S"),
             "location": "Room 202",
             "instructor_id": student_user.id
         }
@@ -318,7 +321,7 @@ class TestScheduleAPI:
         
         update_data = {
             "location": "Updated Room 505",
-            "start_time": "09:00:00"
+            "start_time": datetime.time(9, 0).strftime("%H:%M:%S"),
         }
         
         response = await async_client.put(f"/api/schedule/{test_schedule.id}", json=update_data)

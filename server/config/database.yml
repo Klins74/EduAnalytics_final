@@ -1,0 +1,32 @@
+production:
+  adapter: postgresql
+  encoding: unicode
+  database: canvas
+  username: canvas_user
+  password: password
+  host: db
+  port: 5432
+  pool: 5
+  timeout: 5000
+
+development:
+  adapter: postgresql
+  encoding: unicode
+  database: canvas
+  username: canvas_user
+  password: password
+  host: db
+  port: 5432
+  pool: 5
+  timeout: 5000
+
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: canvas_test
+  username: canvas_user
+  password: password
+  host: db
+  port: 5432
+  pool: 5
+  timeout: 5000

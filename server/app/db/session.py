@@ -1,9 +1,11 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from typing import AsyncGenerator
-import os
+
+print(f"DEBUG: settings.DB_URL = {settings.DB_URL}")
 
 # Создание асинхронного движка SQLAlchemy
 async_engine = create_async_engine(settings.DB_URL, future=True, echo=True)

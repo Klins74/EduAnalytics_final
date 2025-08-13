@@ -146,7 +146,8 @@ async def create_feedback(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"Error creating feedback: {str(e)}")
+        import traceback
+        logger.error(f"Error creating feedback: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create feedback"

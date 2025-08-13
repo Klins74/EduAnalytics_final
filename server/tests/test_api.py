@@ -27,7 +27,13 @@ def test_students(token):
     
     # ИСПРАВЛЕНО: Добавлено обязательное поле email и используем существующий group_id
     unique_email = f"student_{uuid.uuid4()}@test.com"
-    student_data = {"full_name": "Test Student", "email": unique_email, "group_id": group['id']}
+    # Для создания студента теперь требуется user_id
+    # Сначала создаём пользователя
+    user_data = {"username": f"student_{uuid.uuid4()}", "password": "testpass123", "role": "student"}
+    user_res = requests.post(f"{BASE_URL}/api/users", json=user_data, headers=headers)
+    assert user_res.status_code == 201, user_res.text
+    user = user_res.json()
+    student_data = {"full_name": "Test Student", "email": unique_email, "group_id": group['id'], "user_id": user['id']}
 
     # Create
     res = requests.post(f"{BASE_URL}/api/students", json=student_data, headers=headers)

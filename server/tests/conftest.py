@@ -7,6 +7,7 @@
 
 import pytest
 import os
+import time
 from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
@@ -158,8 +159,9 @@ def test_student(db_session, test_user):
     """Создание тестового студента в базе данных"""
     student = Student(
         user_id=test_user.id,
-        student_id="STU001",
-        enrollment_date=datetime.utcnow().date()
+        full_name="Тестовый студент",
+        email=f"student_{test_user.id}@example.com",
+        group_id=None
     )
     db_session.add(student)
     db_session.commit()

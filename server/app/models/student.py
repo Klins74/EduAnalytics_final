@@ -9,5 +9,8 @@ class Student(Base):
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
 
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", backref="student_profile")
+
     group_id = Column(Integer, ForeignKey("groups.id"))
     group = relationship("Group", back_populates="students")

@@ -64,17 +64,48 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_submissions_id'), 'submissions', ['id'], unique=False)
     # Use batch mode for SQLite compatibility
+    conn = op.get_bind()
+    # Check if the constraint exists before dropping it to avoid errors on repeated runs
+    constraint_exists = conn.execute(sa.text("""
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_grades_student_id_students' AND table_name = 'grades'
+    """)).scalar() is not None
     with op.batch_alter_table('grades', schema=None) as batch_op:
         batch_op.add_column(sa.Column('score', sa.Float(), nullable=False))
         batch_op.add_column(sa.Column('feedback', sa.String(length=1000), nullable=True))
         batch_op.add_column(sa.Column('graded_at', sa.DateTime(), nullable=False))
         batch_op.add_column(sa.Column('graded_by', sa.Integer(), nullable=False))
         batch_op.add_column(sa.Column('submission_id', sa.Integer(), nullable=False))
-        batch_op.drop_constraint('fk_grades_student_id_students', type_='foreignkey')
-        batch_op.create_foreign_key('fk_grades_graded_by_users', 'users', ['graded_by'], ['id'])
-        batch_op.create_foreign_key('fk_grades_submission_id_submissions', 'submissions', ['submission_id'], ['id'])
-        batch_op.drop_column('student_id')
-        batch_op.drop_column('subject')
+        if constraint_exists:
+            batch_op.drop_constraint('fk_grades_student_id_students', type_='foreignkey')
+        # Проверяем, существует ли constraint перед созданием
+        fk_graded_by_exists = conn.execute(sa.text("""
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE constraint_name = 'fk_grades_graded_by_users' AND table_name = 'grades'
+        """)).scalar() is not None
+        if not fk_graded_by_exists:
+            batch_op.create_foreign_key('fk_grades_graded_by_users', 'users', ['graded_by'], ['id'])
+        # Проверяем, существует ли constraint перед созданием
+        fk_submission_id_exists = conn.execute(sa.text("""
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE constraint_name = 'fk_grades_submission_id_submissions' AND table_name = 'grades'
+        """)).scalar() is not None
+        if not fk_submission_id_exists:
+            batch_op.create_foreign_key('fk_grades_submission_id_submissions', 'submissions', ['submission_id'], ['id'])
+        # Проверяем, существует ли колонка student_id перед удалением
+        column_student_id_exists = conn.execute(sa.text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'grades' AND column_name = 'student_id'
+        """)).scalar() is not None
+        if column_student_id_exists:
+            batch_op.drop_column('student_id')
+        # Проверяем, существует ли колонка subject перед удалением
+        column_subject_exists = conn.execute(sa.text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'grades' AND column_name = 'subject'
+        """)).scalar() is not None
+        if column_subject_exists:
+            batch_op.drop_column('subject')
         batch_op.drop_column('value')
     # ### end Alembic commands ###
 
