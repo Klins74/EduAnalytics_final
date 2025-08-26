@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Автовход - EduAnalytics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31,38,135,0.37);
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+        }
+        .success { background: rgba(76, 175, 80, 0.8); }
+        .error { background: rgba(244, 67, 54, 0.8); }
+        button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Автоматический вход в EduAnalytics</h1>
+        <div class="spinner"></div>
+        <div id="status" class="status">Выполняется автоматический вход...</div>
+        
+        <div id="manual" style="display: none;">
+            <h3>Ручной вход</h3>
+            <p><strong>Email:</strong> admin@example.com</p>
+            <p><strong>Пароль:</strong> admin</p>
+            <button onclick="window.location.href='/login'">Открыть страницу входа</button>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const manualDiv = document.getElementById('manual');
+        
+        async function autoLogin() {
+            try {
+                statusDiv.textContent = 'Попытка автоматического входа...';
+                
+                // Пробуем войти автоматически
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin@example.com&password=admin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.access_token);
+                    
+                    statusDiv.textContent = '✅ Вход выполнен успешно! Перенаправление...';
+                    statusDiv.className = 'status success';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/reminders';
+                    }, 2000);
+                    
+                } else {
+                    throw new Error(`Ошибка авторизации: ${response.status}`);
+                }
+                
+            } catch (error) {
+                console.error('Auto-login failed:', error);
+                statusDiv.textContent = `❌ Автовход не удался: ${error.message}`;
+                statusDiv.className = 'status error';
+                manualDiv.style.display = 'block';
+            }
+        }
+        
+        // Запускаем автовход через 1 секунду
+        setTimeout(autoLogin, 1000);
+    </script>
+</body>
+</html>

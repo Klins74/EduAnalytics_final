@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Quiz Engine</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin-bottom: 20px; }
+        .response { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test Quiz Engine</h1>
+
+    <div class="section">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" value="admin@example.com">
+        <input type="password" id="password" placeholder="Password" value="admin">
+        <button onclick="login()">Login</button>
+        <div id="login-response" class="response"></div>
+    </div>
+
+    <div class="section">
+        <button onclick="loginStudent()">Login as Student</button>
+        <span style="margin-left:10px; color:#888;">(student: test_student@example.com / student)</span>
+    </div>
+
+    <div class="section">
+        <h2>Create Quiz</h2>
+        <input type="number" id="course_id" placeholder="Course ID" value="1">
+        <input type="text" id="quiz_title" placeholder="Title" value="Test Quiz">
+        <input type="text" id="quiz_desc" placeholder="Description" value="Description">
+        <button onclick="createQuiz()">Create Quiz</button>
+        <div id="create-quiz-response" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>Add Question</h2>
+        <input type="number" id="quiz_id_question" placeholder="Quiz ID">
+        <input type="text" id="question_text" placeholder="Question Text" value="What is 2+2?">
+        <select id="question_type">
+            <option value="short_answer">Short Answer</option>
+            <option value="multiple_choice">Multiple Choice</option>
+        </select>
+        <input type="text" id="correct_answer" placeholder="Correct Answer" value="4">
+        <button onclick="addQuestion()">Add Question</button>
+        <div id="add-question-response" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>Start Attempt (as Student)</h2>
+        <input type="number" id="quiz_id_attempt" placeholder="Quiz ID">
+        <button onclick="startAttempt()">Start Attempt</button>
+        <div id="start-attempt-response" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>Submit Attempt</h2>
+        <input type="number" id="attempt_id" placeholder="Attempt ID">
+        <input type="number" id="question_id_submit" placeholder="Question ID">
+        <input type="text" id="answer_text" placeholder="Answer Text (for text questions)" value="4">
+        <input type="text" id="selected_options" placeholder="Selected Option IDs (comma-separated, for multiple choice)" value="">
+        <button onclick="submitAttempt()">Submit</button>
+        <div id="submit-response" class="response"></div>
+    </div>
+
+    <script>
+        let token = '';
+        let currentRole = 'admin';
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const responseDiv = document.getElementById('login-response');
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `username=${email}&password=${password}`
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    token = data.access_token;
+                    responseDiv.innerHTML = 'Login successful!';
+                    responseDiv.classList.add('success');
+                    currentRole = (email === 'test_student@example.com') ? 'student' : 'admin';
+                } else {
+                    responseDiv.innerHTML = 'Login failed: ' + JSON.stringify(data);
+                    responseDiv.classList.add('error');
+                }
+            } catch (error) {
+                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.add('error');
+            }
+        }
+
+        async function loginStudent() {
+            document.getElementById('email').value = 'test_student@example.com';
+            document.getElementById('password').value = 'student';
+            await login();
+        }
+
+        async function createQuiz() {
+            const courseId = document.getElementById('course_id').value;
+            const title = document.getElementById('quiz_title').value;
+            const desc = document.getElementById('quiz_desc').value;
+            const responseDiv = document.getElementById('create-quiz-response');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/quizzes/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ course_id: parseInt(courseId), title, description: desc })
+                });
+                const data = await response.json();
+                responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                if (response.ok) responseDiv.classList.add('success');
+                else responseDiv.classList.add('error');
+            } catch (error) {
+                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.add('error');
+            }
+        }
+
+        async function addQuestion() {
+            const quizId = document.getElementById('quiz_id_question').value;
+            const text = document.getElementById('question_text').value;
+            const type = document.getElementById('question_type').value;
+            const correct = document.getElementById('correct_answer').value;
+            const responseDiv = document.getElementById('add-question-response');
+
+            let body = {
+                quiz_id: parseInt(quizId),
+                text,
+                type,
+                correct_answer: correct,
+                points: 1.0
+            };
+            if (type === "multiple_choice") {
+                body.options = [
+                    { text: "2", is_correct: false },
+                    { text: "3", is_correct: false },
+                    { text: "4", is_correct: true }
+                ];
+            }
+            try {
+                const response = await fetch(`http://localhost:8000/api/quizzes/${quizId}/questions/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                if (response.ok) responseDiv.classList.add('success');
+                else responseDiv.classList.add('error');
+            } catch (error) {
+                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.add('error');
+            }
+        }
+
+        async function startAttempt() {
+            const quizId = document.getElementById('quiz_id_attempt').value;
+            const responseDiv = document.getElementById('start-attempt-response');
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/quizzes/${quizId}/attempts/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ quiz_id: parseInt(quizId) })
+                });
+                const data = await response.json();
+                responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                if (response.ok) responseDiv.classList.add('success');
+                else responseDiv.classList.add('error');
+            } catch (error) {
+                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.add('error');
+            }
+        }
+
+        async function submitAttempt() {
+            const attemptId = document.getElementById('attempt_id').value;
+            const questionId = document.getElementById('question_id_submit').value;
+            const answerText = document.getElementById('answer_text').value;
+            const selectedOptionsStr = document.getElementById('selected_options').value;
+            const responseDiv = document.getElementById('submit-response');
+
+            // Parse selected options (Canvas-style)
+            let selectedOptions = null;
+            if (selectedOptionsStr) {
+                selectedOptions = selectedOptionsStr.split(',').map(id => parseInt(id.trim()));
+            }
+
+            const answerData = { 
+                question_id: parseInt(questionId), 
+                answer_text: answerText || null,
+                selected_options: selectedOptions,
+                is_correct: null,
+                feedback: null,
+                points_earned: 0.0
+            };
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/quizzes/${attemptId}/submit/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify([answerData])
+                });
+                const data = await response.json();
+                responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                if (response.ok) responseDiv.classList.add('success');
+                else responseDiv.classList.add('error');
+            } catch (error) {
+                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.add('error');
+            }
+        }
+    </script>
+    <div style="margin-top:30px; color:#888; font-size:14px;">
+        <b>Памятка (Canvas-style архитектура):</b><br>
+        1. Создайте квиз как <b>admin</b> (логин по умолчанию).<br>
+        2. Добавьте вопрос (для Multiple Choice добавляются варианты автоматически: 2,3,4 где 4=правильный).<br>
+        3. Переключитесь на <b>Login as Student</b>.<br>
+        4. Введите ID квиза и начните попытку.<br>
+        5. Отправьте ответ:<br>
+        &nbsp;&nbsp;- Для текстовых вопросов: заполните "Answer Text"<br>
+        &nbsp;&nbsp;- Для Multiple Choice: укажите ID правильного варианта в "Selected Option IDs" (например: "3" для option с id=3)<br>
+        <b>Важно:</b> Только студент может проходить квиз! Варианты ответов теперь хранятся в отдельной таблице.<br>
+    </div>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login - EduAnalytics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .token {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Debug Login для EduAnalytics</h1>
+        
+        <div class="info">
+            <strong>Инструкция:</strong> Эта страница поможет установить токен авторизации для тестирования системы напоминаний.
+        </div>
+        
+        <h3>1. Токен авторизации</h3>
+        <div class="token" id="tokenDisplay">
+            eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NTI1NDMyOX0.uxd21VhrOcCrvnhSr0pvGjLOU8uCM_D9Zxscr0hlMyI
+        </div>
+        
+        <h3>2. Установить токен</h3>
+        <button onclick="setToken()">🔑 Установить токен авторизации</button>
+        <button onclick="clearToken()">🗑️ Очистить токен</button>
+        <button onclick="checkToken()">✅ Проверить токен</button>
+        
+        <div id="result"></div>
+        
+        <h3>3. Переход к напоминаниям</h3>
+        <button onclick="goToReminders()">📢 Открыть настройки напоминаний</button>
+        
+        <h3>4. Тестовые данные</h3>
+        <div class="info">
+            <strong>Пользователь:</strong> admin@example.com (роль: admin)<br>
+            <strong>Настроек напоминаний:</strong> 4 активных<br>
+            <strong>API статус:</strong> Работает
+        </div>
+    </div>
+
+    <script>
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NTI1NDMyOX0.uxd21VhrOcCrvnhSr0pvGjLOU8uCM_D9Zxscr0hlMyI';
+        
+        function setToken() {
+            localStorage.setItem('token', token);
+            showResult('✅ Токен установлен успешно!', 'success');
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('token');
+            showResult('🗑️ Токен удален', 'info');
+        }
+        
+        function checkToken() {
+            const currentToken = localStorage.getItem('token');
+            if (currentToken) {
+                showResult(`✅ Токен найден: ${currentToken.substring(0, 20)}...`, 'success');
+                
+                // Проверим API
+                fetch('http://localhost:8000/api/reminders/settings', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error(`API Error: ${response.status}`);
+                })
+                .then(data => {
+                    showResult(`✅ API работает! Найдено ${data.length} настроек напоминаний`, 'success');
+                })
+                .catch(error => {
+                    showResult(`❌ Ошибка API: ${error.message}`, 'error');
+                });
+            } else {
+                showResult('❌ Токен не найден', 'error');
+            }
+        }
+        
+        function goToReminders() {
+            const currentToken = localStorage.getItem('token');
+            if (!currentToken) {
+                showResult('⚠️ Сначала установите токен!', 'error');
+                return;
+            }
+            window.location.href = '/reminders';
+        }
+        
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        // Проверим токен при загрузке
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

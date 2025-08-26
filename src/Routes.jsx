@@ -16,6 +16,15 @@ import AnalyticsDashboard from "pages/index";
 import AIAssistant from "pages/ai";
 import NotFound from "pages/NotFound";
 import MonitoringPage from "pages/MonitoringPage";
+import SchedulePage from "pages/schedule";
+import QuizPage from "pages/quiz";
+import CoursesList from "pages/courses";
+import CourseDetail from "pages/courses/detail";
+import CoursePages from "pages/course-pages";
+import CourseDiscussions from "pages/course-discussions";
+import CourseModules from "pages/course-modules";
+import AssignmentGroups from "pages/assignment-groups";
+import CourseQuizzes from "pages/course-quizzes";
 
 const Routes = () => {
   return (
@@ -35,6 +44,17 @@ const Routes = () => {
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/ai" element={<AIAssistant />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/quiz" element={<QuizPage />} />
+
+            {/* Курсы и разделы курса */}
+            <Route path="/courses" element={<CoursesList />} />
+            <Route path="/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/courses/:courseId/pages" element={<CoursePages />} />
+            <Route path="/courses/:courseId/discussions" element={<CourseDiscussions />} />
+            <Route path="/courses/:courseId/modules" element={<CourseModules />} />
+            <Route path="/courses/:courseId/assignment-groups" element={<AssignmentGroups />} />
+            <Route path="/courses/:courseId/quizzes" element={<CourseQuizzes />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

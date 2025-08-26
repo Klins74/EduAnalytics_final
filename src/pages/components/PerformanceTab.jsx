@@ -1,19 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import Icon from '../../components/AppIcon';
+import { analyticsApi } from '../../api/analyticsApi';
+import { listCourses } from '../../api/courseApi';
 
 const PerformanceTab = ({ period, analysisType }) => {
   const [selectedMetric, setSelectedMetric] = useState('grades');
   const [drillDownData, setDrillDownData] = useState(null);
+  const [courseId, setCourseId] = useState('1');
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [overview, setOverview] = useState(null);
+  const [assignmentPerformance, setAssignmentPerformance] = useState([]);
+  const [onTimePct, setOnTimePct] = useState(null);
 
-  const performanceData = [
-    { subject: 'Математика', average: 4.2, students: 156, trend: 0.3 },
-    { subject: 'Физика', average: 3.8, students: 142, trend: -0.1 },
-    { subject: 'Химия', average: 4.0, students: 134, trend: 0.2 },
-    { subject: 'Биология', average: 4.3, students: 148, trend: 0.4 },
-    { subject: 'История', average: 3.9, students: 167, trend: 0.1 },
-    { subject: 'Литература', average: 4.1, students: 159, trend: 0.2 }
-  ];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await listCourses({ limit: 50 });
+        if (!mounted) return;
+        const items = Array.isArray(data?.courses) ? data.courses : Array.isArray(data) ? data : [];
+        setCourses(items);
+        if (items.length > 0 && (!courseId || courseId === '1')) {
+          setCourseId(String(items[0].id));
+        }
+      } catch (e) {
+        // тихо игнорируем ошибки загрузки списка курсов
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const id = Number(courseId);
+        const [ovw, assignments] = await Promise.all([
+          analyticsApi.getCourseOverview(id),
+          analyticsApi.getCourseAssignmentsAnalytics(id)
+        ]);
+        setOverview(ovw?.overview || null);
+        const list = (assignments?.assignments_analytics || []).map(a => ({ subject: a.title, average: a.statistics?.average_grade ?? 0 }));
+        setAssignmentPerformance(list);
+        const sums = (assignments?.assignments_analytics || []).reduce((acc, a) => {
+          const s = a.statistics || {};
+          acc.on += Number(s.on_time_submissions || 0);
+          acc.late += Number(s.late_submissions || 0);
+          return acc;
+        }, { on: 0, late: 0 });
+        const total = sums.on + sums.late;
+        setOnTimePct(total > 0 ? Math.round((sums.on / total) * 100) : null);
+      } catch (e) {
+        console.error('Ошибка загрузки аналитики курса:', e);
+        setOverview(null);
+        setAssignmentPerformance([]);
+        setOnTimePct(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [courseId]);
 
   const gradeDistribution = [
     { grade: '5', count: 245, percentage: 32.1 },
@@ -64,6 +113,17 @@ const PerformanceTab = ({ period, analysisType }) => {
 
   return (
     <div className="space-y-6">
+      {/* Controls */}
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-text-secondary">Курс:</label>
+        <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background">
+          {courses.map(c => (
+            <option key={c.id} value={c.id}>{c.title || `Курс #${c.id}`}</option>
+          ))}
+        </select>
+        <span className="text-xs text-text-secondary">ID: {courseId}</span>
+        {isLoading && <span className="text-xs text-text-secondary">Загрузка…</span>}
+      </div>
       {/* Metric Selector */}
       <div className="flex flex-wrap gap-2">
         {metrics.map((metric) => (
@@ -87,7 +147,7 @@ const PerformanceTab = ({ period, analysisType }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-text-secondary">Средний балл</p>
-              <p className="text-2xl font-heading font-semibold text-text-primary">4,05</p>
+              <p className="text-2xl font-heading font-semibold text-text-primary">{overview ? (Number(overview.average_grade || 0).toFixed(2)) : '—'}</p>
             </div>
             <div className="w-12 h-12 bg-success-100 rounded-full flex items-center justify-center">
               <Icon name="TrendingUp" size={24} className="text-success" />
@@ -103,8 +163,8 @@ const PerformanceTab = ({ period, analysisType }) => {
         <div className="bg-background border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-secondary">Успеваемость</p>
-              <p className="text-2xl font-heading font-semibold text-text-primary">95,6%</p>
+              <p className="text-sm text-text-secondary">Вовремя сдано</p>
+              <p className="text-2xl font-heading font-semibold text-text-primary">{onTimePct !== null ? `${onTimePct}%` : '—'}</p>
             </div>
             <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
               <Icon name="Award" size={24} className="text-primary" />
@@ -157,7 +217,7 @@ const PerformanceTab = ({ period, analysisType }) => {
         <div className="bg-background border border-border rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-heading font-medium text-text-primary">
-              Успеваемость по предметам
+              Успеваемость по заданиям
             </h3>
             <button className="text-primary hover:text-primary-700 text-sm font-medium">
               Подробнее
@@ -166,7 +226,7 @@ const PerformanceTab = ({ period, analysisType }) => {
           
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData}>
+              <BarChart data={assignmentPerformance}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis 
                   dataKey="subject" 

@@ -10,6 +10,8 @@ import ChatHistory from './components/ChatHistory';
 import ContextPanel from './components/ContextPanel';
 import QuickActions from './components/QuickActions';
 import VoiceInput from './components/VoiceInput';
+import AIAnalytics from './components/AIAnalytics';
+import AIRecommendations from './components/AIRecommendations';
 
 const AIPage = () => {
   const navigate = useNavigate();
@@ -26,11 +28,32 @@ const AIPage = () => {
   const [selectedContext, setSelectedContext] = useState('overview');
   const [searchHistory, setSearchHistory] = useState('');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [analysisContext, setAnalysisContext] = useState({ type: 'student', id: 1 });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Load history from localStorage once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ai_chat_history');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Persist history
+  useEffect(() => {
+    try {
+      localStorage.setItem('ai_chat_history', JSON.stringify(messages));
+    } catch (_) {}
   }, [messages]);
 
   // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: ФУНКЦИЯ ОБНОВЛЕНА ДЛЯ РАБОТЫ С РЕАЛЬНЫМ API ---
@@ -57,33 +80,64 @@ const AIPage = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/ai/chat', {
+      // Create placeholder AI message
+      const aiId = Date.now() + 1;
+      setMessages(prev => [...prev, { id: aiId, type: 'ai', content: '', timestamp: new Date() }]);
+
+      // Prepare context payload
+      const scope = analysisContext?.type || 'general';
+      const payload = {
+        message: currentInput,
+        scope,
+        student_id: scope === 'student' ? Number(analysisContext.id) : undefined,
+        course_id: scope === 'course' ? Number(analysisContext.id) : undefined,
+      };
+
+      const response = await fetch('http://localhost:8000/api/ai/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ message: currentInput })
+        body: JSON.stringify(payload)
       });
-      
+
       if (response.status === 401) {
-          navigate('/login');
-          return;
+        navigate('/login');
+        return;
       }
 
-      if (!response.ok) {
-          throw new Error('Ошибка ответа от AI-сервиса');
+      if (!response.ok || !response.body) {
+        throw new Error('Ошибка ответа от AI-сервиса');
       }
 
-      const aiData = await response.json();
-      
-      const aiResponse = {
-        id: Date.now() + 1,
-        type: 'ai',
-        content: aiData.reply, // Используем ответ от бэкенда
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          const lines = part.split('\n');
+          let isEnd = false;
+          for (const line of lines) {
+            if (line.startsWith('event: end')) {
+              isEnd = true;
+            } else if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[END]') continue;
+              setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: (m.content || '') + data } : m));
+            }
+          }
+          if (isEnd) {
+            // finalize
+          }
+        }
+      }
 
     } catch (error) {
         console.error("Ошибка AI-чата:", error);
@@ -97,6 +151,18 @@ const AIPage = () => {
     } finally {
         setIsTyping(false);
     }
+  };
+
+  const clearHistory = () => {
+    setMessages([
+      {
+        id: 1,
+        type: 'ai',
+        content: `Добро пожаловать в AI-помощник EduAnalytics! Чем могу помочь сегодня?`,
+        timestamp: new Date(),
+      }
+    ]);
+    try { localStorage.removeItem('ai_chat_history'); } catch (_) {}
   };
 
   const quickSuggestions = [
@@ -114,6 +180,12 @@ const AIPage = () => {
   const handleVoiceInput = (transcript) => {
     setInputValue(transcript);
     setIsVoiceActive(false);
+  };
+
+  const fetchAnalyticsData = () => {
+    // Эта функция будет вызываться при изменении контекста анализа
+    // Компоненты AIAnalytics и AIRecommendations автоматически обновятся
+    console.log('Analytics context updated:', analysisContext);
   };
 
   const formatTime = (date) => {
@@ -150,7 +222,36 @@ const AIPage = () => {
               <div className="ml-auto flex items-center space-x-2">
                 <div className="w-3 h-3 bg-success rounded-full ai-pulse" />
                 <span className="text-sm text-text-secondary">AI активен</span>
+                <button onClick={clearHistory} className="px-2 py-1 text-xs border rounded hover:bg-background">Очистить</button>
               </div>
+            </div>
+          </div>
+
+          {/* Контекст анализа */}
+          <div className="mb-6 bg-surface border border-border rounded-lg p-4">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-text-primary">Контекст анализа:</span>
+              <select
+                value={analysisContext.type}
+                onChange={(e) => setAnalysisContext(prev => ({ ...prev, type: e.target.value }))}
+                className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="student">Студент</option>
+                <option value="course">Курс</option>
+              </select>
+              <input
+                type="number"
+                placeholder="ID"
+                value={analysisContext.id}
+                onChange={(e) => setAnalysisContext(prev => ({ ...prev, id: parseInt(e.target.value) || 1 }))}
+                className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-20"
+              />
+              <button
+                onClick={fetchAnalyticsData}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-700 transition-colors duration-150"
+              >
+                Обновить
+              </button>
             </div>
           </div>
 
@@ -243,8 +344,20 @@ const AIPage = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-4 space-y-4">
               <ContextPanel selectedContext={selectedContext} onContextChange={setSelectedContext}/>
+              
+              {/* AI Analytics */}
+              <AIAnalytics 
+                studentId={analysisContext.type === 'student' ? analysisContext.id : null}
+                courseId={analysisContext.type === 'course' ? analysisContext.id : null}
+              />
+              
+              {/* AI Recommendations */}
+              <AIRecommendations 
+                studentId={analysisContext.type === 'student' ? analysisContext.id : null}
+                courseId={analysisContext.type === 'course' ? analysisContext.id : null}
+              />
             </div>
           </div>
         </div>

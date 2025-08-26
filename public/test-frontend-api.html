@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест подключения к API - EduAnalytics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест подключения фронтенда к API</h1>
+        
+        <div class="info test-section">
+            <h3>ℹ️ Информация</h3>
+            <p><strong>Frontend:</strong> localhost:4028</p>
+            <p><strong>API:</strong> localhost:8000</p>
+            <p><strong>Цель:</strong> Проверить что фронтенд может подключиться к API</p>
+        </div>
+
+        <div class="test-section">
+            <h3>1. Тест CORS и подключения к API</h3>
+            <button onclick="testAPIConnection()">🔗 Проверить подключение к API</button>
+            <div id="apiResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Тест авторизации</h3>
+            <button onclick="testAuth()">🔐 Протестировать авторизацию</button>
+            <div id="authResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Тест получения данных</h3>
+            <button onclick="testDataFetch()">📊 Получить данные напоминаний</button>
+            <div id="dataResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Быстрый вход</h3>
+            <button onclick="quickLogin()">🚀 Выполнить быстрый вход</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Переход к системе</h3>
+            <button onclick="goToSystem()">🎯 Перейти к напоминаниям</button>
+        </div>
+    </div>
+
+    <script>
+        async function testAPIConnection() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '⏳ Проверяю подключение...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ API доступен! Статус: ${data.status}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка подключения: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testAuth() {
+            const resultDiv = document.getElementById('authResult');
+            resultDiv.innerHTML = '⏳ Тестирую авторизацию...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin@example.com&password=admin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ Авторизация успешна! Токен получен: ${data.access_token.substring(0, 20)}...`;
+                    resultDiv.className = 'result success';
+                    // Сохраняем токен
+                    localStorage.setItem('accessToken', data.access_token);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка авторизации: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDataFetch() {
+            const resultDiv = document.getElementById('dataResult');
+            const token = localStorage.getItem('accessToken');
+            
+            if (!token) {
+                resultDiv.innerHTML = '⚠️ Сначала выполните авторизацию!';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            resultDiv.innerHTML = '⏳ Получаю данные...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/reminders/settings', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ Данные получены! Найдено настроек: ${data.length}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка получения данных: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function quickLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '⏳ Выполняю быстрый вход...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin@example.com&password=admin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.access_token);
+                    resultDiv.innerHTML = '✅ Быстрый вход выполнен! Токен сохранен.';
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка быстрого входа: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function goToSystem() {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                window.location.href = '/reminders';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        // Автоматически проверяем API при загрузке
+        window.onload = function() {
+            testAPIConnection();
+        };
+    </script>
+</body>
+</html>

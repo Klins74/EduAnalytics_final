@@ -45,6 +45,11 @@ class Submission(Base):
     submitted_at = Column(DateTime, default=func.now(), nullable=False)
     status = Column(SQLEnum(SubmissionStatus), default=SubmissionStatus.submitted, nullable=False)
     
+    # Поля для файлов
+    file_path = Column(String(500), nullable=True, comment="Путь к загруженному файлу")
+    file_name = Column(String(255), nullable=True, comment="Оригинальное имя файла")
+    file_size = Column(Integer, nullable=True, comment="Размер файла в байтах")
+    
     # student_id - связь с таблицей пользователей (студентов)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     

@@ -14,7 +14,7 @@ from app.schemas.schedule import (
     ScheduleList
 )
 
-router = APIRouter(prefix="/api/schedule", tags=["schedule"])
+router = APIRouter(prefix="/schedule", tags=["schedule"])
 
 
 def require_teacher_or_admin(current_user: User = Depends(get_current_user)):
@@ -25,6 +25,58 @@ def require_teacher_or_admin(current_user: User = Depends(get_current_user)):
             detail="Доступ разрешен только преподавателям и администраторам"
         )
     return current_user
+
+
+@router.get("/ai-free-slots")
+async def ai_free_slots(
+    schedule_date: date,
+    instructor_id: int,
+    duration_minutes: int = 90,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Подбор 3 свободных слотов для инструктора в указанный день.
+
+    Простая эвристика: проверяем интервалы начиная с 09:00 до 19:00 с шагом 30 минут.
+    """
+    schedules, _ = await schedule_crud.get_schedules(
+        db=db,
+        course_id=None,
+        date_from=schedule_date,
+        date_to=schedule_date,
+        instructor_id=instructor_id,
+        skip=0,
+        limit=500,
+    )
+    import datetime as dt
+    busy: list[tuple[dt.time, dt.time]] = []
+    for s in schedules:
+        # Преобразуем строки времени БД к time
+        start_t = dt.datetime.strptime(str(s.start_time), "%H:%M:%S").time()
+        end_t = dt.datetime.strptime(str(s.end_time), "%H:%M:%S").time()
+        busy.append((start_t, end_t))
+
+    base_dt = dt.datetime.combine(schedule_date, dt.time(9, 0))
+    end_day_dt = dt.datetime.combine(schedule_date, dt.time(19, 0))
+    step = dt.timedelta(minutes=30)
+    dur = dt.timedelta(minutes=duration_minutes)
+    suggestions = []
+    while base_dt + dur <= end_day_dt and len(suggestions) < 3:
+        start_t = (base_dt).time()
+        end_t = (base_dt + dur).time()
+        # проверяем конфликт
+        conflict = False
+        for b_start, b_end in busy:
+            if (start_t < b_end) and (end_t > b_start):
+                conflict = True
+                break
+        if not conflict:
+            suggestions.append({
+                "start_time": start_t.strftime('%H:%M'),
+                "end_time": end_t.strftime('%H:%M')
+            })
+        base_dt += step
+    return {"suggestions": suggestions}
 
 
 @router.get("/", response_model=ScheduleList)
@@ -87,6 +139,85 @@ async def get_schedule(
     
     return schedule
 
+
+@router.post("/ai-create")
+async def ai_create_schedule(
+    payload: dict,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Упрощенный экшен создания занятия для AI.
+
+    Требует роли teacher/admin.
+    Поля: course_id, instructor_id, schedule_date (YYYY-MM-DD), start_time, end_time, location?, lesson_type?, description?
+    """
+    required = ["course_id", "instructor_id", "schedule_date", "start_time", "end_time"]
+    for f in required:
+        if f not in payload:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Отсутствует поле: {f}")
+
+    data = ScheduleCreate(
+        course_id=int(payload["course_id"]),
+        instructor_id=int(payload["instructor_id"]),
+        schedule_date=payload["schedule_date"],
+        start_time=payload["start_time"],
+        end_time=payload["end_time"],
+        location=payload.get("location"),
+        lesson_type=payload.get("lesson_type", "lecture"),
+        description=payload.get("description", "Создано через AI"),
+        notes=None,
+    )
+
+    item = await schedule_crud.create_schedule(db=db, schedule_data=data, current_user=current_user)
+    created = await schedule_crud.get_with_relations(db, item.id)
+    return {"id": created.id}
+
+
+@router.get("/ai-free-slots")
+async def ai_free_slots(
+    schedule_date: date,
+    instructor_id: int,
+    duration_minutes: int = 90,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Подбор 3 свободных слотов для инструктора в указанный день.
+
+    Простая эвристика: проверяем интервалы начиная с 09:00 до 19:00 с шагом 30 минут.
+    """
+    # Загружаем существующие занятия в этот день
+    schedules, _ = await schedule_crud.get_schedules(
+        db=db,
+        course_id=None,
+        date_from=schedule_date,
+        date_to=schedule_date,
+        instructor_id=instructor_id,
+        skip=0,
+        limit=500,
+    )
+    busy = []
+    for s in schedules:
+        busy.append((str(s.start_time), str(s.end_time)))
+
+    import datetime as dt
+    base = dt.datetime.combine(schedule_date, dt.time(9, 0))
+    end_day = dt.datetime.combine(schedule_date, dt.time(19, 0))
+    step = dt.timedelta(minutes=30)
+    dur = dt.timedelta(minutes=duration_minutes)
+    suggestions = []
+    while base + dur <= end_day and len(suggestions) < 3:
+        start = base.time().strftime('%H:%M')
+        end = (base + dur).time().strftime('%H:%M')
+        # проверяем конфликт
+        conflict = False
+        for b_start, b_end in busy:
+            if (start < b_end) and (end > b_start):
+                conflict = True
+                break
+        if not conflict:
+            suggestions.append({"start_time": start, "end_time": end})
+        base += step
+    return {"suggestions": suggestions}
 
 @router.post("/", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED)
 async def create_schedule(

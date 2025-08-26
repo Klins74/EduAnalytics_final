@@ -1,14 +1,39 @@
 // src/pages/components/StudentDetailModal.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../components/AppIcon';
 import Image from '../../components/AppImage';
 import { motion } from 'framer-motion';
+import { analyticsApi } from '../../api/analyticsApi';
 
 const StudentDetailModal = ({ student, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [perfLoading, setPerfLoading] = useState(false);
+  const [perfError, setPerfError] = useState('');
+  const [overview, setOverview] = useState(null);
+  const [coursesPerformance, setCoursesPerformance] = useState([]);
 
   if (!student) return null;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setPerfLoading(true);
+        setPerfError('');
+        const s = await analyticsApi.getStudentPerformance(student.id);
+        if (!mounted) return;
+        const ovw = s?.overall_performance || null;
+        setOverview(ovw);
+        setCoursesPerformance(Array.isArray(s?.courses_performance) ? s.courses_performance : []);
+      } catch (e) {
+        setPerfError('Не удалось загрузить аналитику студента');
+      } finally {
+        setPerfLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [student?.id]);
 
   const tabs = [
     { id: 'overview', label: 'Обзор', icon: 'User' },
@@ -144,8 +169,58 @@ const StudentDetailModal = ({ student, onClose }) => {
 
   const renderPerformanceTab = () => (
     <div className="space-y-4">
-        {/* ... Содержимое вкладки "Успеваемость" (оставляем как было) ... */}
-        <h4>Здесь будет успеваемость студента...</h4>
+      {perfLoading ? (
+        <div className="text-sm text-text-secondary">Загрузка аналитики успеваемости…</div>
+      ) : perfError ? (
+        <div className="text-sm text-error">{perfError}</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-background rounded-lg p-4 text-center">
+              <div className="text-2xl font-heading font-semibold text-text-primary mb-1">{overview?.total_submissions ?? 0}</div>
+              <div className="text-sm text-text-secondary">Сдач всего</div>
+            </div>
+            <div className="bg-background rounded-lg p-4 text-center">
+              <div className="text-2xl font-heading font-semibold text-text-primary mb-1">{overview?.total_assignments ?? 0}</div>
+              <div className="text-sm text-text-secondary">Заданий всего</div>
+            </div>
+            <div className="bg-background rounded-lg p-4 text-center">
+              <div className="text-2xl font-heading font-semibold text-text-primary mb-1">{(overview?.overall_average_grade ?? 0).toFixed(2)}</div>
+              <div className="text-sm text-text-secondary">Средний балл</div>
+            </div>
+            <div className="bg-background rounded-lg p-4 text-center">
+              <div className="text-2xl font-heading font-semibold text-text-primary mb-1">{overview?.courses_count ?? 0}</div>
+              <div className="text-sm text-text-secondary">Курсов</div>
+            </div>
+          </div>
+
+          <div className="bg-background border border-border rounded-lg">
+            <div className="px-4 py-3 border-b border-border text-sm font-medium text-text-primary">По курсам</div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-text-secondary">
+                    <th className="p-2">Курс</th>
+                    <th className="p-2">Сдач</th>
+                    <th className="p-2">Средний балл</th>
+                    <th className="p-2">Своевременность</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {coursesPerformance.map((c) => (
+                    <tr key={c.course_id} className="border-t border-border">
+                      <td className="p-2">{c.course_title}</td>
+                      <td className="p-2">{c.submissions_count ?? 0}</td>
+                      <td className="p-2">{(c.average_grade ?? 0).toFixed(2)}</td>
+                      <td className="p-2">{(c.on_time_rate ?? 0).toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 

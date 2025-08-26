@@ -81,34 +81,5 @@ class SubmissionList(BaseModel):
     limit: int
 
 
-class GradeCreate(BaseModel):
-    """Схема для создания оценки."""
-    score: float = Field(..., ge=0, le=100, json_schema_extra={"example": 85.5}, description="Оценка от 0 до 100")
-    feedback: Optional[str] = Field(
-        None, 
-        max_length=1000, 
-        json_schema_extra={"example": "Хорошая работа, но есть небольшие ошибки в третьей задаче"}
-    )
-
-
-class GradeResponse(BaseModel):
-    """Схема для ответа с оценкой."""
-    id: int
-    score: float
-    feedback: Optional[str]
-    graded_at: datetime
-    graded_by: int
-    submission_id: int
-    
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "score": 85.5,
-                "feedback": "Хорошая работа, но есть небольшие ошибки в третьей задаче",
-                "graded_at": "2024-03-16T14:30:00",
-                "graded_by": 1,
-                "submission_id": 1
-            }
-        }
+# Импортируем схемы оценок из основного модуля grade
+from .grade import GradeCreate, GradeResponse

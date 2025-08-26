@@ -39,6 +39,8 @@ class Assignment(Base):
 
     # Связи
     course = relationship("Course", back_populates="assignments")
+    assignment_group_id = Column(Integer, ForeignKey("assignment_groups.id"), nullable=True)
+    assignment_group = relationship("AssignmentGroup", back_populates="assignments")
     submissions = relationship("Submission", back_populates="assignment", cascade="all, delete-orphan")
     gradebook_entries = relationship("GradebookEntry", back_populates="assignment", cascade="all, delete-orphan")
     

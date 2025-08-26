@@ -11,7 +11,7 @@ from app.schemas.assignment import AssignmentCreate, AssignmentRead, AssignmentU
 from app.crud import assignment as crud_assignment
 
 router = APIRouter(
-    prefix="/assignments",
+
     tags=["Assignments"],
     responses={
         401: {"description": "Unauthorized"},
@@ -36,7 +36,7 @@ async def get_assignments(
     current_user: User = Depends(get_current_user)
 ):
     """Получить список заданий с пагинацией."""
-    assignments, total = crud_assignment.get_assignments(
+    assignments, total = await crud_assignment.get_assignments(
         db=db,
         course_id=course_id,
         skip=skip,
@@ -63,7 +63,7 @@ async def get_assignment(
     current_user: User = Depends(get_current_user)
 ):
     """Получить задание по ID."""
-    assignment = crud_assignment.get_assignment_by_id(db=db, assignment_id=assignment_id)
+    assignment = await crud_assignment.get_assignment_by_id(db=db, assignment_id=assignment_id)
     if not assignment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -81,7 +81,6 @@ async def get_assignment(
 )
 async def create_assignment(
     assignment: AssignmentCreate,
-    due_date: datetime = Query(..., description="Дедлайн задания", examples=["2024-03-15T23:59:59"]),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin))
 ):
@@ -93,10 +92,8 @@ async def create_assignment(
     - Пользователь должен быть владельцем курса (или администратором)
     - Дедлайн должен быть в пределах периода курса
     """
-    # Обновляем дедлайн из query параметра
-    assignment.due_date = due_date
     
-    return crud_assignment.create_assignment(
+    return await crud_assignment.create_assignment(
         db=db,
         assignment=assignment,
         current_user=current_user
@@ -122,7 +119,7 @@ async def update_assignment(
     - Пользователь должен быть владельцем курса или администратором
     - При обновлении дедлайна проверяется период курса
     """
-    assignment = crud_assignment.update_assignment(
+    assignment = await crud_assignment.update_assignment(
         db=db,
         assignment_id=assignment_id,
         assignment_update=assignment_update,
@@ -153,7 +150,7 @@ async def delete_assignment(
     - Задание должно существовать
     - Пользователь должен быть владельцем курса или администратором
     """
-    success = crud_assignment.delete_assignment(
+    success = await crud_assignment.delete_assignment(
         db=db,
         assignment_id=assignment_id,
         current_user=current_user

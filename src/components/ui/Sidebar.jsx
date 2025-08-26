@@ -14,25 +14,49 @@ const Sidebar = () => {
       label: 'Панель управления',
       path: '/',
       icon: 'LayoutDashboard',
-      requiredRole: 'admin',
+      requiredRole: 'all',
       contextualTooltip: 'Центральная панель управления системой'
     },
-// ...
-{
-  id: 'monitoring',
-  label: 'Мониторинг студентов',
-  path: '/monitoring', // <-- ИЗМЕНЕНО
-  icon: 'Users',
-  //...
-},
-{
-  id: 'analytics',
-  label: 'Аналитика и отчеты',
-  path: '/analytics', // <-- ИЗМЕНЕНО
-  icon: 'BarChart3',
-  //...
-},
-// ...
+    {
+      id: 'courses',
+      label: 'Курсы',
+      path: '/courses',
+      icon: 'BookOpen',
+      requiredRole: 'all',
+      contextualTooltip: 'Список курсов и переход к разделам курса'
+    },
+    {
+      id: 'schedule',
+      label: 'Расписание',
+      path: '/schedule',
+      icon: 'Calendar',
+      requiredRole: 'all',
+      contextualTooltip: 'Расписание занятий и событий'
+    },
+    {
+      id: 'quiz',
+      label: 'Квизы',
+      path: '/quiz',
+      icon: 'ListChecks',
+      requiredRole: 'all',
+      contextualTooltip: 'Создание и прохождение квизов'
+    },
+    {
+      id: 'monitoring',
+      label: 'Мониторинг студентов',
+      path: '/monitoring',
+      icon: 'Users',
+      requiredRole: 'all',
+      contextualTooltip: 'Отслеживание активности студентов'
+    },
+    {
+      id: 'analytics',
+      label: 'Аналитика и отчеты',
+      path: '/analytics',
+      icon: 'BarChart3',
+      requiredRole: 'all',
+      contextualTooltip: 'Аналитические панели и отчеты'
+    },
     {
       id: 'ai-assistant',
       label: 'AI-помощник',
@@ -40,14 +64,6 @@ const Sidebar = () => {
       icon: 'Bot',
       requiredRole: 'all',
       contextualTooltip: 'Интеллектуальный помощник для анализа данных'
-    },
-    {
-      id: 'student-profile',
-      label: 'Профиль студента',
-      path: '/',
-      icon: 'UserCircle',
-      requiredRole: 'all',
-      contextualTooltip: 'Индивидуальные профили и прогресс студентов'
     }
   ];
 

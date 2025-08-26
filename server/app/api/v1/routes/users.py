@@ -32,7 +32,7 @@ async def create_new_user(user_in: UserCreate, db: AsyncSession = Depends(get_as
     try:
         print("create_new_user input:", user_in)
         from app.core.security import pwd_context
-        user_data = user_in.dict()
+        user_data = user_in.model_dump()
         user_data["hashed_password"] = pwd_context.hash(user_data.pop("password"))
         from app.models.user import User
         new_user = User(**user_data)
@@ -74,7 +74,7 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_async_ses
         print("create_user input:", user)
         # Set a default password for new users (e.g., 'defaultpassword')
         hashed_password = pwd_context.hash("defaultpassword")
-        user_dict = user.dict()
+        user_dict = user.model_dump()
         user_dict["hashed_password"] = hashed_password
         from app.models.user import User
         new_user = User(**user_dict)

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Ollama Integration</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .response {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .fail {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test AI Ollama Integration</h1>
+        
+        <div class="test-section">
+            <h2>Login</h2>
+            <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="admin@example.com">
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="admin">
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="login-response" class="response"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test AI Chat</h2>
+            <div>
+                <label for="message">Message:</label>
+                <textarea id="message" rows="4">Расскажи о возможностях аналитики в системе</textarea>
+            </div>
+            <button onclick="testAiChat()">Send Message</button>
+            <div id="ai-chat-response" class="response"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test AI Chat Stream</h2>
+            <div>
+                <label for="stream-message">Message:</label>
+                <textarea id="stream-message" rows="4">Как я могу улучшить успеваемость студентов?</textarea>
+            </div>
+            <button onclick="testAiChatStream()">Send Message (Stream)</button>
+            <div id="ai-chat-stream-response" class="response"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Intent Recognition</h2>
+            <div>
+                <label for="intent-message">Message:</label>
+                <textarea id="intent-message" rows="4">Создай расписание для курса Математика на завтра в 10:00</textarea>
+            </div>
+            <button onclick="testIntentRecognition()">Extract Intent</button>
+            <div id="intent-response" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        let token = '';
+        
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginResponse = document.getElementById('login-response');
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    token = data.access_token;
+                    localStorage.setItem('accessToken', token);
+                    loginResponse.innerHTML = `<span class="status success">SUCCESS</span>\nToken: ${token.substring(0, 20)}...`;
+                    loginResponse.classList.remove('error');
+                } else {
+                    loginResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${JSON.stringify(data)}`;
+                    loginResponse.classList.add('error');
+                }
+            } catch (error) {
+                loginResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${error.message}`;
+                loginResponse.classList.add('error');
+            }
+        }
+        
+        async function testAiChat() {
+            const message = document.getElementById('message').value;
+            const aiChatResponse = document.getElementById('ai-chat-response');
+            
+            if (!token) {
+                aiChatResponse.innerHTML = `<span class="status fail">FAIL</span>\nPlease login first`;
+                aiChatResponse.classList.add('error');
+                return;
+            }
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch('http://localhost:8000/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ message }),
+                });
+                
+                const data = await response.json();
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                
+                if (response.ok) {
+                    aiChatResponse.innerHTML = `<span class="status success">SUCCESS</span> (${duration}s)\n\n${data.reply}`;
+                    aiChatResponse.classList.remove('error');
+                } else {
+                    aiChatResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${JSON.stringify(data)}`;
+                    aiChatResponse.classList.add('error');
+                }
+            } catch (error) {
+                aiChatResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${error.message}`;
+                aiChatResponse.classList.add('error');
+            }
+        }
+        
+        function testAiChatStream() {
+            const message = document.getElementById('stream-message').value;
+            const streamResponse = document.getElementById('ai-chat-stream-response');
+            
+            if (!token) {
+                streamResponse.innerHTML = `<span class="status fail">FAIL</span>\nPlease login first`;
+                streamResponse.classList.add('error');
+                return;
+            }
+            
+            streamResponse.innerHTML = `<span class="status">LOADING...</span>\n`;
+            streamResponse.classList.remove('error');
+            
+            const startTime = performance.now();
+            const eventSource = new EventSource(`http://localhost:8000/api/ai/chat/stream?token=${encodeURIComponent(token)}&message=${encodeURIComponent(message)}`);
+            
+            let fullResponse = '';
+            
+            eventSource.onmessage = function(event) {
+                fullResponse += event.data;
+                streamResponse.innerHTML = `<span class="status">STREAMING...</span>\n\n${fullResponse}`;
+            };
+            
+            eventSource.addEventListener('end', function(event) {
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                eventSource.close();
+                streamResponse.innerHTML = `<span class="status success">SUCCESS</span> (${duration}s)\n\n${fullResponse}`;
+            });
+            
+            eventSource.onerror = function(error) {
+                eventSource.close();
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                streamResponse.innerHTML = `<span class="status fail">FAIL</span> (${duration}s)\nError occurred while streaming`;
+                streamResponse.classList.add('error');
+            };
+        }
+        
+        async function testIntentRecognition() {
+            const message = document.getElementById('intent-message').value;
+            const intentResponse = document.getElementById('intent-response');
+            
+            if (!token) {
+                intentResponse.innerHTML = `<span class="status fail">FAIL</span>\nPlease login first`;
+                intentResponse.classList.add('error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/ai/intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ message }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    intentResponse.innerHTML = `<span class="status success">SUCCESS</span>\n\nAction: ${data.action}\nConfidence: ${data.confidence}\nParams: ${JSON.stringify(data.params, null, 2)}`;
+                    intentResponse.classList.remove('error');
+                } else {
+                    intentResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${JSON.stringify(data)}`;
+                    intentResponse.classList.add('error');
+                }
+            } catch (error) {
+                intentResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${error.message}`;
+                intentResponse.classList.add('error');
+            }
+        }
+
+        // Check if we already have a token in localStorage
+        window.onload = function() {
+            const storedToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+            if (storedToken) {
+                token = storedToken;
+                document.getElementById('login-response').innerHTML = `<span class="status success">ALREADY LOGGED IN</span>\nToken: ${token.substring(0, 20)}...`;
+            }
+        };
+    </script>
+</body>
+</html>
+

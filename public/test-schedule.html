@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест расписания - EduAnalytics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .schedule-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .schedule-item h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .schedule-item p {
+            margin: 5px 0;
+            color: #6c757d;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .filter-group select, .filter-group input {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 Тест расписания EduAnalytics</h1>
+        
+        <div class="info test-section">
+            <h3>ℹ️ Информация</h3>
+            <p><strong>Цель:</strong> Проверить работу API расписания, курсов и пользователей</p>
+            <p><strong>Токен:</strong> <span id="tokenStatus">Не установлен</span></p>
+        </div>
+
+        <div class="test-section">
+            <h3>1. Авторизация</h3>
+            <button onclick="login()">🔐 Войти в систему</button>
+            <button onclick="checkToken()">✅ Проверить токен</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Тест API курсов</h3>
+            <button onclick="testCourses()">📚 Загрузить курсы</button>
+            <div id="coursesResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Тест API пользователей</h3>
+            <button onclick="testUsers()">👥 Загрузить пользователей</button>
+            <div id="usersResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Тест API расписания</h3>
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Курс:</label>
+                    <select id="courseFilter">
+                        <option value="">Все курсы</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Преподаватель:</label>
+                    <select id="instructorFilter">
+                        <option value="">Все преподаватели</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Дата с:</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label>Дата по:</label>
+                    <input type="date" id="dateTo">
+                </div>
+            </div>
+            <button onclick="testSchedule()">📅 Загрузить расписание</button>
+            <div id="scheduleResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Создание занятия</h3>
+            <button onclick="showCreateForm()">➕ Показать форму создания</button>
+            <div id="createForm" style="display: none;">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Курс:</label>
+                        <select id="createCourse" required>
+                            <option value="">Выберите курс</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Преподаватель:</label>
+                        <select id="createInstructor" required>
+                            <option value="">Выберите преподавателя</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Дата:</label>
+                        <input type="date" id="createDate" required>
+                    </div>
+                    <div class="filter-group">
+                        <label>Время начала:</label>
+                        <input type="time" id="createStartTime" value="09:00" required>
+                    </div>
+                    <div class="filter-group">
+                        <label>Время окончания:</label>
+                        <input type="time" id="createEndTime" value="10:30" required>
+                    </div>
+                    <div class="filter-group">
+                        <label>Аудитория:</label>
+                        <input type="text" id="createLocation" value="Аудитория 101" required>
+                    </div>
+                    <div class="filter-group">
+                        <label>Тип занятия:</label>
+                        <select id="createType" required>
+                            <option value="lecture">Лекция</option>
+                            <option value="seminar">Семинар</option>
+                            <option value="lab">Лабораторная</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="createSchedule()">💾 Создать занятие</button>
+            </div>
+            <div id="createResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Переход к системе</h3>
+            <button onclick="goToSchedule()">🎯 Открыть расписание в системе</button>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        async function login() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '⏳ Выполняю вход...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin@example.com&password=admin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentToken = data.access_token;
+                    localStorage.setItem('accessToken', currentToken);
+                    resultDiv.innerHTML = '✅ Вход выполнен успешно! Токен получен и сохранен.';
+                    resultDiv.className = 'result success';
+                    document.getElementById('tokenStatus').textContent = 'Установлен';
+                    document.getElementById('tokenStatus').style.color = 'green';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка входа: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function checkToken() {
+            const resultDiv = document.getElementById('loginResult');
+            const token = localStorage.getItem('accessToken');
+            
+            if (token) {
+                resultDiv.innerHTML = `✅ Токен найден: ${token.substring(0, 20)}...`;
+                resultDiv.className = 'result success';
+                currentToken = token;
+                document.getElementById('tokenStatus').textContent = 'Установлен';
+                document.getElementById('tokenStatus').style.color = 'green';
+            } else {
+                resultDiv.innerHTML = '❌ Токен не найден';
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testCourses() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('coursesResult');
+            resultDiv.innerHTML = '⏳ Загружаю курсы...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/courses/', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const courses = data.courses || [];
+                    
+                    resultDiv.innerHTML = `✅ Курсы загружены! Найдено: ${courses.length}`;
+                    resultDiv.className = 'result success';
+                    
+                    // Заполняем фильтры
+                    const courseFilter = document.getElementById('courseFilter');
+                    const createCourse = document.getElementById('createCourse');
+                    
+                    courseFilter.innerHTML = '<option value="">Все курсы</option>';
+                    createCourse.innerHTML = '<option value="">Выберите курс</option>';
+                    
+                    courses.forEach(course => {
+                        courseFilter.innerHTML += `<option value="${course.id}">${course.name}</option>`;
+                        createCourse.innerHTML += `<option value="${course.id}">${course.name}</option>`;
+                    });
+                    
+                    // Показываем курсы
+                    courses.forEach(course => {
+                        resultDiv.innerHTML += `
+                            <div class="schedule-item">
+                                <h4>${course.name}</h4>
+                                <p><strong>ID:</strong> ${course.id}</p>
+                                <p><strong>Описание:</strong> ${course.description || 'Нет описания'}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка загрузки курсов: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testUsers() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('usersResult');
+            resultDiv.innerHTML = '⏳ Загружаю пользователей...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/users/', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    const teachers = users.filter(u => u.role === 'teacher' || u.role === 'admin');
+                    
+                    resultDiv.innerHTML = `✅ Пользователи загружены! Найдено преподавателей: ${teachers.length}`;
+                    resultDiv.className = 'result success';
+                    
+                    // Заполняем фильтры
+                    const instructorFilter = document.getElementById('instructorFilter');
+                    const createInstructor = document.getElementById('createInstructor');
+                    
+                    instructorFilter.innerHTML = '<option value="">Все преподаватели</option>';
+                    createInstructor.innerHTML = '<option value="">Выберите преподавателя</option>';
+                    
+                    teachers.forEach(user => {
+                        instructorFilter.innerHTML += `<option value="${user.id}">${user.username} (${user.role})</option>`;
+                        createInstructor.innerHTML += `<option value="${user.id}">${user.username} (${user.role})</option>`;
+                    });
+                    
+                    // Показываем преподавателей
+                    teachers.forEach(user => {
+                        resultDiv.innerHTML += `
+                            <div class="schedule-item">
+                                <h4>${user.username}</h4>
+                                <p><strong>ID:</strong> ${user.id}</p>
+                                <p><strong>Роль:</strong> ${user.role}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка загрузки пользователей: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testSchedule() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('scheduleResult');
+            resultDiv.innerHTML = '⏳ Загружаю расписание...';
+            
+            try {
+                const params = new URLSearchParams();
+                const courseId = document.getElementById('courseFilter').value;
+                const instructorId = document.getElementById('instructorFilter').value;
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                
+                if (courseId) params.set('course_id', courseId);
+                if (instructorId) params.set('instructor_id', instructorId);
+                if (dateFrom) params.set('date_from', dateFrom);
+                if (dateTo) params.set('date_to', dateTo);
+                
+                const response = await fetch(`http://localhost:8000/api/schedule?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const schedules = data.schedules || [];
+                    
+                    resultDiv.innerHTML = `✅ Расписание загружено! Найдено занятий: ${schedules.length}`;
+                    resultDiv.className = 'result success';
+                    
+                    schedules.forEach(schedule => {
+                        resultDiv.innerHTML += `
+                            <div class="schedule-item">
+                                <h4>Занятие #${schedule.id}</h4>
+                                <p><strong>Курс ID:</strong> ${schedule.course_id}</p>
+                                <p><strong>Дата:</strong> ${schedule.schedule_date}</p>
+                                <p><strong>Время:</strong> ${schedule.start_time} - ${schedule.end_time}</p>
+                                <p><strong>Аудитория:</strong> ${schedule.location}</p>
+                                <p><strong>Преподаватель ID:</strong> ${schedule.instructor_id}</p>
+                                <p><strong>Тип:</strong> ${schedule.lesson_type}</p>
+                                <p><strong>Описание:</strong> ${schedule.description || 'Нет описания'}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка загрузки расписания: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function showCreateForm() {
+            const form = document.getElementById('createForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function createSchedule() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('createResult');
+            resultDiv.innerHTML = '⏳ Создаю занятие...';
+            
+            try {
+                const payload = {
+                    course_id: parseInt(document.getElementById('createCourse').value),
+                    instructor_id: parseInt(document.getElementById('createInstructor').value),
+                    schedule_date: document.getElementById('createDate').value,
+                    start_time: document.getElementById('createStartTime').value,
+                    end_time: document.getElementById('createEndTime').value,
+                    location: document.getElementById('createLocation').value,
+                    lesson_type: document.getElementById('createType').value,
+                    description: 'Тестовое занятие',
+                    notes: 'Создано через тестовую страницу'
+                };
+                
+                const response = await fetch('http://localhost:8000/api/schedule/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ Занятие создано успешно! ID: ${data.id}`;
+                    resultDiv.className = 'result success';
+                    
+                    // Обновляем расписание
+                    setTimeout(testSchedule, 1000);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка создания занятия: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function goToSchedule() {
+            if (currentToken) {
+                window.location.href = '/schedule';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        // Проверяем токен при загрузке
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

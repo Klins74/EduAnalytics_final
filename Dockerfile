@@ -1,8 +1,8 @@
-# Simple Dockerfile for Vite/React frontend
+# Dockerfile for Vite/React frontend
 FROM node:18-alpine
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci --only=production
 COPY . .
-EXPOSE 3000
-CMD ["npm", "run", "dev"]
+EXPOSE 5173
+CMD ["npm", "start", "--", "--port", "5173", "--host", "0.0.0.0"]

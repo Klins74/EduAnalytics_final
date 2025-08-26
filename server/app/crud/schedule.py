@@ -146,9 +146,16 @@ class CRUDSchedule:
             )
         
         # Создание расписания
-        db_schedule = Schedule(**schedule_data.model_dump())
+        schedule_dict = schedule_data.model_dump()
+        # Преобразуем boolean в integer для is_cancelled
+        if 'is_cancelled' in schedule_dict:
+            schedule_dict['is_cancelled'] = 1 if schedule_dict['is_cancelled'] else 0
+        
+
+        
+        db_schedule = Schedule(**schedule_dict)
         db.add(db_schedule)
-        await db.flush()
+        await db.commit()
         await db.refresh(db_schedule)
         
         # Отправляем уведомление о новом расписании
@@ -156,6 +163,13 @@ class CRUDSchedule:
             await self._send_schedule_notification(db, db_schedule, current_user, is_new=True)
         except Exception as e:
             logger.error(f"Ошибка отправки уведомления о новом расписании {db_schedule.id}: {str(e)}")
+        
+        # Планируем напоминания для нового занятия
+        try:
+            from app.services.reminder_service import reminder_service
+            await reminder_service.schedule_reminder_for_new_schedule(db, db_schedule.id)
+        except Exception as e:
+            logger.error(f"Ошибка планирования напоминаний для расписания {db_schedule.id}: {str(e)}")
         
         return db_schedule
 
@@ -281,8 +295,15 @@ class CRUDSchedule:
                 detail="Вы можете удалять расписание только для своих курсов"
             )
         
+        # Отменяем напоминания для удаляемого занятия
+        try:
+            from app.services.reminder_service import reminder_service
+            await reminder_service.cancel_reminders_for_schedule(db, schedule_id)
+        except Exception as e:
+            logger.error(f"Ошибка отмены напоминаний для расписания {schedule_id}: {str(e)}")
+        
         await db.delete(schedule)
-        await db.flush()
+        await db.commit()
         
         return True
 
@@ -365,6 +386,17 @@ class CRUDSchedule:
             
         except Exception as e:
             logger.error(f"Ошибка отправки уведомления о расписании: {str(e)}")
+
+
+    def _get_classroom(self, classroom_id: int):
+        """Получить информацию о классной комнате."""
+        # Заглушка для тестов
+        return {"id": classroom_id, "name": f"Classroom {classroom_id}"}
+    
+    def _get_course(self, course_id: int):
+        """Получить информацию о курсе."""
+        # Заглушка для тестов
+        return {"id": course_id, "name": f"Course {course_id}"}
 
 
 # Создание экземпляра CRUD

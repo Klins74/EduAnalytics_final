@@ -23,7 +23,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/n8n/notify", response_model=WebhookResponse)
+@router.post("/notify", response_model=WebhookResponse)
 async def webhook_n8n_notify(
     request: WebhookNotifyRequest,
     background_tasks: BackgroundTasks,
@@ -106,19 +106,23 @@ async def _validate_event_data(request: WebhookNotifyRequest, db: Session) -> Di
     try:
         if request.event_type == WebhookEventType.DEADLINE_APPROACHING:
             data = DeadlineNotificationData(**request.data)
-            return data.dict()
+            return data.model_dump()
             
         elif request.event_type == WebhookEventType.GRADE_CREATED:
             data = GradeNotificationData(**request.data)
-            return data.dict()
+            return data.model_dump()
             
         elif request.event_type == WebhookEventType.FEEDBACK_CREATED:
             data = FeedbackNotificationData(**request.data)
-            return data.dict()
+            return data.model_dump()
             
         elif request.event_type == WebhookEventType.SCHEDULE_UPDATED:
             data = ScheduleNotificationData(**request.data)
-            return data.dict()
+            return data.model_dump()
+            
+        elif request.event_type == WebhookEventType.TEST_NOTIFICATION:
+            # Для тестового события просто возвращаем данные как есть
+            return request.data
             
         else:
             raise ValueError(f"Неподдерживаемый тип события: {request.event_type}")
@@ -150,6 +154,10 @@ async def _process_webhook_event(
             
         elif event_type == WebhookEventType.SCHEDULE_UPDATED:
             await _process_schedule_notification(notification_service, data, channels)
+            
+        elif event_type == WebhookEventType.TEST_NOTIFICATION:
+            # Для тестового события просто логируем
+            logger.info(f"Обработано тестовое событие с данными: {data}")
             
         logger.info(f"Событие {event_type} успешно обработано")
         

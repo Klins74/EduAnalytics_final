@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
+import AIInsights from '../../../components/ui/AIInsights';
 
-const AIRecommendations = ({ recommendations }) => {
+const AIRecommendations = ({ recommendations, studentId = 1 }) => {
   const [expandedCard, setExpandedCard] = useState(null);
 
   const getPriorityColor = (priority) => {
@@ -152,21 +153,7 @@ const AIRecommendations = ({ recommendations }) => {
 
       {/* AI Insights Summary */}
       <div className="mt-6 pt-4 border-t border-border">
-        <div className="bg-gradient-to-r from-secondary-50 to-primary-50 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center flex-shrink-0">
-              <Icon name="Sparkles" size={16} color="white" />
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-text-primary mb-1">
-                Персональный анализ
-              </h4>
-              <p className="text-xs text-text-secondary">
-                На основе анализа вашей активности за последние 30 дней, AI выявил 3 ключевые области для улучшения и 2 сильные стороны для развития.
-              </p>
-            </div>
-          </div>
-        </div>
+        <AIInsights studentId={studentId} context="student-profile" />
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ class ScheduleBase(BaseModel):
     end_time: time = Field(..., json_schema_extra={"example": "10:30:00"}, description="Время окончания")
     location: Optional[str] = Field(None, max_length=200, json_schema_extra={"example": "Аудитория 101"}, description="Место проведения")
     instructor_id: int = Field(..., json_schema_extra={"example": 1}, description="ID преподавателя")
-    lesson_type: LessonType = Field(default=LessonType.LECTURE, description="Тип занятия")
+    lesson_type: str = Field(default="lecture", description="Тип занятия")
     description: Optional[str] = Field(None, description="Описание занятия, тема")
     notes: Optional[str] = Field(None, description="Дополнительные заметки")
     is_cancelled: bool = Field(default=False, description="Отменено ли занятие")
@@ -52,7 +52,7 @@ class ScheduleUpdate(BaseModel):
     end_time: Optional[time] = None
     location: Optional[str] = Field(None, max_length=200)
     instructor_id: Optional[int] = None
-    lesson_type: Optional[LessonType] = None
+    lesson_type: Optional[str] = None
     description: Optional[str] = None
     notes: Optional[str] = None
     is_cancelled: Optional[bool] = None

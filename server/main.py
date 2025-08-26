@@ -1,7 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import os
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
-from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook
+from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook, analytics, notifications, reminders, ai, module as module_routes, assignment_group as assignment_group_routes, rubric as rubric_routes, page as page_routes, discussion as discussion_routes, quiz as quiz_routes
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.models.group import Group
@@ -57,6 +61,27 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="EduAnalytics API", lifespan=lifespan)
 
+# Sentry initialization (safe: no PII)
+from app.core.config import settings as app_settings
+sentry_dsn = os.getenv("SENTRY_DSN", app_settings.SENTRY_DSN)
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        send_default_pii=False,
+    )
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:4028", "http://127.0.0.1:4028", "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Подключение маршрутов пользователей
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 # Подключение маршрутов групп
@@ -71,13 +96,25 @@ app.include_router(course.router, prefix="/api/courses", tags=["Courses"])
 app.include_router(assignment.router, prefix="/api/assignments", tags=["Assignments"])
 # Подключение маршрутов сдач заданий
 app.include_router(submission.router, prefix="/api/submissions", tags=["Submissions"])
+# Подключение маршрутов аналитики
+app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
 # Подключение маршрутов электронного журнала
 app.include_router(gradebook.router, prefix="/api/gradebook", tags=["Gradebook"])
 # Подключение маршрутов комментариев
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
-app.include_router(schedule.router, tags=["Schedule"])
+app.include_router(schedule.router, prefix="/api", tags=["Schedule"])
 app.include_router(webhook.router, prefix="/api/v1/n8n", tags=["n8n"])
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(reminders.router, prefix="/api/reminders", tags=["Reminders"])
+app.include_router(ai.router, prefix="/api", tags=["AI"])
+
+app.include_router(module_routes.router, prefix="/api")
+app.include_router(quiz_routes.router, prefix="/api")
+app.include_router(assignment_group_routes.router, prefix="/api")
+app.include_router(rubric_routes.router, prefix="/api")
+app.include_router(page_routes.router, prefix="/api")
+app.include_router(discussion_routes.router, prefix="/api")
 
 # Health check endpoint
 @app.get("/", tags=["Health Check"])

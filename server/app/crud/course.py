@@ -1,7 +1,8 @@
-from typing import Optional, List
-from sqlalchemy.orm import Session, selectinload
+from typing import Optional, List, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_
+from sqlalchemy import and_, select, func
 from fastapi import HTTPException, status
 import logging
 
@@ -13,32 +14,45 @@ from app.schemas.course import CourseCreate, CourseUpdate
 logger = logging.getLogger(__name__)
 
 
-def get_course_by_id(db: Session, course_id: int) -> Optional[Course]:
+async def get_course_by_id(db: AsyncSession, course_id: int) -> Optional[Course]:
     """Получить курс по ID с загрузкой связанных данных."""
-    return db.query(Course).options(
-        selectinload(Course.owner)
-    ).filter(Course.id == course_id).first()
+    result = await db.execute(
+        select(Course).options(
+            selectinload(Course.owner)
+        ).where(Course.id == course_id)
+    )
+    return result.scalar_one_or_none()
 
 
-def get_courses(
-    db: Session, 
+async def get_courses(
+    db: AsyncSession, 
     skip: int = 0, 
     limit: int = 100,
     owner_id: Optional[int] = None
-) -> tuple[List[Course], int]:
+) -> Tuple[List[Course], int]:
     """Получить список курсов с пагинацией и фильтрацией."""
-    query = db.query(Course).options(selectinload(Course.owner))
     
+    # Базовый запрос
+    query = select(Course).options(selectinload(Course.owner))
+    count_query = select(func.count(Course.id))
+    
+    # Применяем фильтр по owner_id если указан
     if owner_id:
-        query = query.filter(Course.owner_id == owner_id)
+        query = query.where(Course.owner_id == owner_id)
+        count_query = count_query.where(Course.owner_id == owner_id)
     
-    total = query.count()
-    courses = query.offset(skip).limit(limit).all()
+    # Получаем общее количество
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
     
-    return courses, total
+    # Получаем курсы с пагинацией
+    courses_result = await db.execute(query.offset(skip).limit(limit))
+    courses = courses_result.scalars().all()
+    
+    return list(courses), total
 
 
-def create_course(db: Session, course: CourseCreate, current_user: User) -> Course:
+async def create_course(db: AsyncSession, course: CourseCreate, current_user: User) -> Course:
     """Создать новый курс с проверками прав и валидацией."""
     # Проверка прав пользователя
     if current_user.role not in [UserRole.teacher, UserRole.admin]:
@@ -49,12 +63,15 @@ def create_course(db: Session, course: CourseCreate, current_user: User) -> Cour
         )
     
     # Проверка существования владельца курса
-    owner = db.query(User).filter(
-        and_(
-            User.id == course.owner_id,
-            User.role.in_([UserRole.teacher, UserRole.admin])
+    owner_result = await db.execute(
+        select(User).where(
+            and_(
+                User.id == course.owner_id,
+                User.role.in_([UserRole.teacher, UserRole.admin])
+            )
         )
-    ).first()
+    )
+    owner = owner_result.scalar_one_or_none()
     
     if not owner:
         logger.error(f"Попытка создать курс с несуществующим или неподходящим владельцем {course.owner_id}")
@@ -68,17 +85,17 @@ def create_course(db: Session, course: CourseCreate, current_user: User) -> Cour
     
     try:
         db.add(db_course)
-        db.commit()
-        db.refresh(db_course)
+        await db.commit()
+        await db.refresh(db_course)
         
         # Загрузка связанных данных
-        db_course = get_course_by_id(db, db_course.id)
+        db_course = await get_course_by_id(db, db_course.id)
         
         logger.info(f"Курс '{db_course.title}' создан пользователем {current_user.id}")
         return db_course
         
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         if "UNIQUE constraint failed: courses.title" in str(e):
             logger.warning(f"Попытка создать курс с существующим названием: {course.title}")
             raise HTTPException(
@@ -93,14 +110,14 @@ def create_course(db: Session, course: CourseCreate, current_user: User) -> Cour
             )
 
 
-def update_course(
-    db: Session, 
+async def update_course(
+    db: AsyncSession, 
     course_id: int, 
     course_update: CourseUpdate,
     current_user: User
 ) -> Optional[Course]:
     """Обновить курс с проверкой прав."""
-    db_course = get_course_by_id(db, course_id)
+    db_course = await get_course_by_id(db, course_id)
     if not db_course:
         return None
     
@@ -118,14 +135,14 @@ def update_course(
         setattr(db_course, field, value)
     
     try:
-        db.commit()
-        db.refresh(db_course)
+        await db.commit()
+        await db.refresh(db_course)
         
         logger.info(f"Курс {course_id} обновлен пользователем {current_user.id}")
-        return get_course_by_id(db, course_id)
+        return await get_course_by_id(db, course_id)
         
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         if "UNIQUE constraint failed: courses.title" in str(e):
             logger.warning(f"Попытка обновить курс с существующим названием")
             raise HTTPException(
@@ -140,9 +157,9 @@ def update_course(
             )
 
 
-def delete_course(db: Session, course_id: int, current_user: User) -> bool:
+async def delete_course(db: AsyncSession, course_id: int, current_user: User) -> bool:
     """Удалить курс с проверкой прав."""
-    db_course = get_course_by_id(db, course_id)
+    db_course = await get_course_by_id(db, course_id)
     if not db_course:
         return False
     
@@ -155,14 +172,14 @@ def delete_course(db: Session, course_id: int, current_user: User) -> bool:
         )
     
     try:
-        db.delete(db_course)
-        db.commit()
+        await db.delete(db_course)
+        await db.commit()
         
         logger.info(f"Курс {course_id} удален пользователем {current_user.id}")
         return True
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Ошибка удаления курса {course_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

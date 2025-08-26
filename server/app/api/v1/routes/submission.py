@@ -1,6 +1,8 @@
 from typing import Optional
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session
@@ -10,10 +12,9 @@ from app.schemas.submission import (
     SubmissionCreate, 
     SubmissionUpdate, 
     SubmissionRead, 
-    SubmissionList,
-    GradeCreate,
-    GradeResponse
+    SubmissionList
 )
+from app.schemas.grade import GradeCreate, GradeResponse
 from app.crud import submission as crud_submission
 
 
@@ -59,7 +60,7 @@ async def get_submissions(
     if current_user.role == UserRole.student:
         student_id = current_user.id
     
-    submissions, total = crud_submission.get_submissions(
+    submissions, total = await crud_submission.get_submissions(
         db=db,
         skip=skip,
         limit=limit,
@@ -105,7 +106,7 @@ async def get_submission(
     Студенты могут просматривать только свои сдачи,
     преподаватели и администраторы - любые.
     """
-    submission = crud_submission.get_submission(db=db, submission_id=submission_id)
+    submission = await crud_submission.get_submission(db=db, submission_id=submission_id)
     if not submission:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -160,7 +161,7 @@ async def create_submission(
     - "late" - если сдано после дедлайна
     """
     try:
-        db_submission = crud_submission.create_submission(
+        db_submission = await crud_submission.create_submission(
             db=db, 
             submission=submission, 
             current_user=current_user
@@ -203,7 +204,7 @@ async def update_submission(
     При изменении времени сдачи статус пересчитывается автоматически.
     """
     try:
-        updated_submission = crud_submission.update_submission(
+        updated_submission = await crud_submission.update_submission(
             db=db,
             submission_id=submission_id,
             submission_update=submission_update,
@@ -252,7 +253,7 @@ async def delete_submission(
     При удалении сдачи также удаляются все связанные оценки.
     """
     try:
-        deleted = crud_submission.delete_submission(
+        deleted = await crud_submission.delete_submission(
             db=db,
             submission_id=submission_id,
             current_user=current_user
@@ -308,7 +309,7 @@ async def create_grade(
     3. Отправляется уведомление студенту (через n8n-флоу)
     """
     try:
-        grade = crud_submission.create_grade(
+        grade = await crud_submission.create_grade(
             db=db,
             submission_id=submission_id,
             grade_data=grade_data,
@@ -332,3 +333,171 @@ async def create_grade(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при выставлении оценки"
         )
+
+
+@router.post(
+    "/{submission_id}/upload",
+    summary="Загрузить файл для сдачи",
+    description="Загрузить файл (документ, изображение, архив) для сдачи задания. Поддерживаемые форматы: PDF, DOC, DOCX, TXT, JPG, PNG, ZIP, RAR.",
+    responses={
+        200: {"description": "Файл успешно загружен"},
+        400: {"description": "Некорректный файл"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав"},
+        404: {"description": "Сдача задания не найдена"},
+        413: {"description": "Файл слишком большой"}
+    },
+    tags=["Submissions"]
+)
+async def upload_file(
+    submission_id: int,
+    file: UploadFile = File(..., description="Файл для загрузки"),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Загрузить файл для сдачи задания.
+    
+    - **file**: Файл для загрузки (максимум 10MB)
+    - **submission_id**: ID сдачи задания
+    
+    Поддерживаемые форматы:
+    - Документы: PDF, DOC, DOCX, TXT
+    - Изображения: JPG, PNG
+    - Архивы: ZIP, RAR
+    
+    Файл сохраняется в папку uploads/submissions/{submission_id}/
+    """
+    # Проверяем размер файла (максимум 10MB)
+    if file.size and file.size > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Файл слишком большой. Максимальный размер: 10MB"
+        )
+    
+    # Проверяем расширение файла
+    allowed_extensions = {
+        '.pdf', '.doc', '.docx', '.txt',  # Документы
+        '.jpg', '.jpeg', '.png',          # Изображения
+        '.zip', '.rar'                    # Архивы
+    }
+    
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Неподдерживаемый формат файла. Разрешены: {', '.join(allowed_extensions)}"
+        )
+    
+    # Проверяем существование сдачи
+    submission = await crud_submission.get_submission(db, submission_id)
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Сдача задания не найдена"
+        )
+    
+    # Проверяем права: студент может загружать файлы только для своих сдач
+    if (current_user.role == UserRole.student and 
+        submission.student_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет прав для загрузки файла для этой сдачи"
+        )
+    
+    # Создаем папку для файлов сдачи
+    upload_dir = f"uploads/submissions/{submission_id}"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Генерируем уникальное имя файла
+    import uuid
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(upload_dir, f"{file_id}_{file.filename}")
+    
+    try:
+        # Сохраняем файл
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Обновляем сдачу, добавляя информацию о файле
+        submission.file_path = file_path
+        submission.file_name = file.filename
+        submission.file_size = len(content)
+        
+        await db.commit()
+        await db.refresh(submission)
+        
+        logging.info(
+            f"File uploaded successfully: {file.filename} "
+            f"for submission {submission_id} by user {current_user.id}"
+        )
+        
+        return {
+            "message": "Файл успешно загружен",
+            "file_name": file.filename,
+            "file_size": len(content),
+            "file_path": file_path
+        }
+        
+    except Exception as e:
+        logging.error(f"Error uploading file for submission {submission_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при загрузке файла"
+        )
+
+
+@router.get(
+    "/{submission_id}/download/{file_id}",
+    summary="Скачать файл сдачи",
+    description="Скачать файл, загруженный для сдачи задания",
+    responses={
+        200: {"description": "Файл найден"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав"},
+        404: {"description": "Файл не найден"}
+    },
+    tags=["Submissions"]
+)
+async def download_file(
+    submission_id: int,
+    file_id: str,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Скачать файл сдачи задания.
+    
+    - **submission_id**: ID сдачи задания
+    - **file_id**: ID файла (UUID)
+    """
+    # Проверяем существование сдачи
+    submission = await crud_submission.get_submission(db, submission_id)
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Сдача задания не найдена"
+        )
+    
+    # Проверяем права доступа
+    if (current_user.role == UserRole.student and 
+        submission.student_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет прав для скачивания файла этой сдачи"
+        )
+    
+    # Проверяем, что файл существует
+    if not submission.file_path or not os.path.exists(submission.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Файл не найден"
+        )
+    
+    # Возвращаем файл для скачивания
+    return FileResponse(
+        submission.file_path,
+        filename=submission.file_name or f"submission_{submission_id}.file",
+        media_type="application/octet-stream"
+    )

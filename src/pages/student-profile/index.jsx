@@ -247,7 +247,7 @@ const StudentProfile = () => {
                 subjects={studentData.currentSemester.subjects}
                 selectedPeriod={selectedPeriod}
               />
-              <AIRecommendations recommendations={aiRecommendations} />
+              <AIRecommendations recommendations={aiRecommendations} studentId={studentData.id} />
             </div>
           </div>
 

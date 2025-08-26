@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Dashboard'ов - EduAnalytics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .dashboard-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .dashboard-card h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        .dashboard-card p {
+            margin: 10px 0;
+            color: #6c757d;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-ok { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Тест Dashboard'ов EduAnalytics</h1>
+        
+        <div class="info test-section">
+            <h3>ℹ️ Информация</h3>
+            <p><strong>Цель:</strong> Проверить работу всех dashboard'ов системы</p>
+            <p><strong>Токен:</strong> <span id="tokenStatus">Не установлен</span></p>
+        </div>
+
+        <div class="test-section">
+            <h3>1. Авторизация</h3>
+            <button onclick="login()">🔐 Войти в систему</button>
+            <button onclick="checkToken()">✅ Проверить токен</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Тест основных API</h3>
+            <button onclick="testBasicAPIs()">🔗 Проверить основные API</button>
+            <div id="basicAPIsResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Тест Teacher Dashboard API</h3>
+            <button onclick="testTeacherDashboard()">👨‍🏫 Проверить Teacher Dashboard</button>
+            <div id="teacherDashboardResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Тест Student Dashboard API</h3>
+            <button onclick="testStudentDashboard()">👨‍🎓 Проверить Student Dashboard</button>
+            <div id="studentDashboardResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Тест AI API</h3>
+            <button onclick="testAIAPI()">🤖 Проверить AI API</button>
+            <div id="aiAPIResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Переход к Dashboard'ам</h3>
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3>👨‍🏫 Teacher Dashboard</h3>
+                    <p>Аналитика преподавателя, курсы, студенты</p>
+                    <button onclick="goToTeacherDashboard()">Открыть</button>
+                </div>
+                <div class="dashboard-card">
+                    <h3>👨‍🎓 Student Dashboard</h3>
+                    <p>Личная аналитика, задания, оценки</p>
+                    <button onclick="goToStudentDashboard()">Открыть</button>
+                </div>
+                <div class="dashboard-card">
+                    <h3>🤖 AI-помощник</h3>
+                    <p>Искусственный интеллект для анализа</p>
+                    <button onclick="goToAI()">Открыть</button>
+                </div>
+                <div class="dashboard-card">
+                    <h3>📊 Аналитика</h3>
+                    <p>Общая аналитика системы</p>
+                    <button onclick="goToAnalytics()">Открыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        async function login() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '⏳ Выполняю вход...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=admin@example.com&password=admin'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentToken = data.access_token;
+                    localStorage.setItem('accessToken', currentToken);
+                    resultDiv.innerHTML = '✅ Вход выполнен успешно! Токен получен и сохранен.';
+                    resultDiv.className = 'result success';
+                    document.getElementById('tokenStatus').textContent = 'Установлен';
+                    document.getElementById('tokenStatus').style.color = 'green';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка входа: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function checkToken() {
+            const resultDiv = document.getElementById('loginResult');
+            const token = localStorage.getItem('accessToken');
+            
+            if (token) {
+                resultDiv.innerHTML = `✅ Токен найден: ${token.substring(0, 20)}...`;
+                resultDiv.className = 'result success';
+                currentToken = token;
+                document.getElementById('tokenStatus').textContent = 'Установлен';
+                document.getElementById('tokenStatus').style.color = 'green';
+            } else {
+                resultDiv.innerHTML = '❌ Токен не найден';
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testBasicAPIs() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('basicAPIsResult');
+            resultDiv.innerHTML = '⏳ Проверяю основные API...';
+            
+            const results = [];
+            
+            try {
+                // Тест API курсов
+                const coursesRes = await fetch('http://localhost:8000/api/courses/', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                results.push(`Курсы: ${coursesRes.ok ? '✅' : '❌'} (${coursesRes.status})`);
+
+                // Тест API пользователей
+                const usersRes = await fetch('http://localhost:8000/api/users/', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                results.push(`Пользователи: ${usersRes.ok ? '✅' : '❌'} (${usersRes.status})`);
+
+                // Тест API расписания
+                const scheduleRes = await fetch('http://localhost:8000/api/schedule', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                results.push(`Расписание: ${scheduleRes.ok ? '✅' : '❌'} (${scheduleRes.status})`);
+
+                resultDiv.innerHTML = `✅ Основные API проверены:<br>${results.join('<br>')}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка проверки API: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testTeacherDashboard() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('teacherDashboardResult');
+            resultDiv.innerHTML = '⏳ Проверяю Teacher Dashboard API...';
+            
+            try {
+                // Тест API аналитики преподавателя
+                const teacherRes = await fetch('http://localhost:8000/api/analytics/teacher/1/overview', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (teacherRes.ok) {
+                    const data = await teacherRes.json();
+                    resultDiv.innerHTML = `✅ Teacher Dashboard API работает!<br>
+                        <strong>Курсов:</strong> ${data.overview?.total_courses || 0}<br>
+                        <strong>Ожидающих сдач:</strong> ${data.overview?.pending_submissions || 0}<br>
+                        <strong>Средняя оценка:</strong> ${data.overview?.average_grade || 0}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${teacherRes.status}`);
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка Teacher Dashboard API: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testStudentDashboard() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('studentDashboardResult');
+            resultDiv.innerHTML = '⏳ Проверяю Student Dashboard API...';
+            
+            try {
+                // Тест API аналитики студента
+                const studentRes = await fetch('http://localhost:8000/api/analytics/students/1/performance', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (studentRes.ok) {
+                    const data = await studentRes.json();
+                    resultDiv.innerHTML = `✅ Student Dashboard API работает!<br>
+                        <strong>Курсов:</strong> ${data.overall_performance?.courses_count || 0}<br>
+                        <strong>Заданий:</strong> ${data.overall_performance?.total_assignments || 0}<br>
+                        <strong>Средняя оценка:</strong> ${data.overall_performance?.overall_average_grade || 0}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${studentRes.status}`);
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка Student Dashboard API: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testAIAPI() {
+            if (!currentToken) {
+                alert('Сначала выполните вход!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('aiAPIResult');
+            resultDiv.innerHTML = '⏳ Проверяю AI API...';
+            
+            try {
+                // Тест API AI чата
+                const aiRes = await fetch('http://localhost:8000/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: 'Привет, как дела?' })
+                });
+                
+                if (aiRes.ok) {
+                    const data = await aiRes.json();
+                    resultDiv.innerHTML = `✅ AI API работает!<br>
+                        <strong>Ответ:</strong> ${data.reply ? 'Получен' : 'Не получен'}<br>
+                        <strong>Статус:</strong> ${aiRes.status}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    throw new Error(`HTTP ${aiRes.status}`);
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка AI API: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function goToTeacherDashboard() {
+            if (currentToken) {
+                window.location.href = '/teacher-dashboard';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        function goToStudentDashboard() {
+            if (currentToken) {
+                window.location.href = '/student-dashboard';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        function goToAI() {
+            if (currentToken) {
+                window.location.href = '/ai';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        function goToAnalytics() {
+            if (currentToken) {
+                window.location.href = '/analytics';
+            } else {
+                alert('Сначала выполните вход!');
+            }
+        }
+
+        // Проверяем токен при загрузке
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

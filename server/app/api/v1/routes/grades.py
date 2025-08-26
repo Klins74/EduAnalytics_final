@@ -23,7 +23,7 @@ async def create_grade(
 ):
     try:
         print("create_grade input:", grade_in)
-        grade = Grade(value=grade_in.value, student_id=grade_in.student_id, subject=grade_in.subject)
+        grade = Grade(score=grade_in.score, feedback=grade_in.feedback, graded_by=grade_in.graded_by, submission_id=grade_in.submission_id)
         db.add(grade)
         await db.commit()
         await db.refresh(grade)
@@ -59,7 +59,7 @@ async def update_grade(
     grade = result.scalar_one_or_none()
     if not grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
-    for key, value in grade_in.dict().items():
+    for key, value in grade_in.model_dump().items():
         setattr(grade, key, value)
     try:
         await db.commit()

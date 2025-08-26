@@ -1,8 +1,18 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const KPICard = ({ data }) => {
-  const { title, value, change, changeType, icon, color, description } = data;
+const KPICard = ({ data, title, value, change, changeType, icon, color, description }) => {
+  // Support both data object and individual props
+  const cardData = data || { title, value, change, changeType, icon, color, description };
+  const {
+    title: cardTitle,
+    value: cardValue,
+    change: cardChange,
+    changeType: cardChangeType,
+    icon: cardIcon,
+    color: cardColor,
+    description: cardDescription
+  } = cardData;
 
   const getColorClasses = (color) => {
     const colorMap = {
@@ -22,35 +32,35 @@ const KPICard = ({ data }) => {
   return (
     <div className="bg-surface border border-border rounded-lg p-6 hover:shadow-card transition-all duration-300 hover-lift card-elevation">
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 bg-gradient-to-br ${getColorClasses(color)} rounded-lg flex items-center justify-center`}>
-          <Icon name={icon} size={24} color="white" />
+        <div className={`w-12 h-12 bg-gradient-to-br ${getColorClasses(cardColor)} rounded-lg flex items-center justify-center`}>
+          <Icon name={cardIcon} size={24} color="white" />
         </div>
-        <div className={`flex items-center space-x-1 ${getChangeColor(changeType)}`}>
+        <div className={`flex items-center space-x-1 ${getChangeColor(cardChangeType)}`}>
           <Icon 
-            name={changeType === 'positive' ? 'TrendingUp' : 'TrendingDown'} 
+            name={cardChangeType === 'positive' ? 'TrendingUp' : 'TrendingDown'} 
             size={16} 
           />
-          <span className="text-sm font-medium">{change}</span>
+          <span className="text-sm font-medium">{cardChange}</span>
         </div>
       </div>
       
       <div className="mb-2">
         <h3 className="text-2xl font-heading font-semibold text-text-primary mb-1">
-          {value}
+          {cardValue}
         </h3>
-        <p className="text-sm font-medium text-text-primary">{title}</p>
+        <p className="text-sm font-medium text-text-primary">{cardTitle}</p>
       </div>
       
-      <p className="text-xs text-text-secondary">{description}</p>
+      <p className="text-xs text-text-secondary">{cardDescription}</p>
       
       {/* Progress indicator for some metrics */}
-      {(title.includes('Активность') || title.includes('Успеваемость')) && (
+      {(cardTitle && (cardTitle.includes('Активность') || cardTitle.includes('Успеваемость'))) && (
         <div className="mt-4">
           <div className="w-full bg-background rounded-full h-1.5">
             <div 
-              className={`bg-gradient-to-r ${getColorClasses(color)} h-1.5 rounded-full transition-all duration-500`}
+              className={`bg-gradient-to-r ${getColorClasses(cardColor)} h-1.5 rounded-full transition-all duration-500`}
               style={{ 
-                width: title.includes('Активность') ? '89%' : '84%' 
+                width: cardTitle.includes('Активность') ? '89%' : '84%' 
               }}
             ></div>
           </div>

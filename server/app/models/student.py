@@ -14,3 +14,5 @@ class Student(Base):
 
     group_id = Column(Integer, ForeignKey("groups.id"))
     group = relationship("Group", back_populates="students")
+
+    quiz_attempts = relationship("QuizAttempt", back_populates="student")

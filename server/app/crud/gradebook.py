@@ -145,7 +145,7 @@ class CRUDGradebook:
 
         # Создаем запись
         db_entry = GradebookEntry(
-            **entry_in.dict(),
+            **entry_in.model_dump(),
             created_by=current_user.id
         )
         

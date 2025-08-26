@@ -1,19 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import Icon from '../../components/AppIcon';
+import { analyticsApi } from '../../api/analyticsApi';
 
 const PredictionsTab = ({ period, analysisType }) => {
   const [selectedModel, setSelectedModel] = useState('performance');
   const [predictionHorizon, setPredictionHorizon] = useState('month');
+  const [scope, setScope] = useState('course'); // 'course' | 'student'
+  const [targetId, setTargetId] = useState('1');
+  const [bucket, setBucket] = useState('week'); // for trends
+  const [isLoading, setIsLoading] = useState(false);
+  const [trendSeries, setTrendSeries] = useState([]);
+  const [forecast, setForecast] = useState([]);
+  const [error, setError] = useState('');
 
-  const performancePrediction = [
-    { month: 'Янв', actual: 4.1, predicted: 4.1, confidence: 95 },
-    { month: 'Фев', actual: 4.0, predicted: 4.0, confidence: 94 },
-    { month: 'Мар', actual: 4.2, predicted: 4.1, confidence: 92 },
-    { month: 'Апр', actual: null, predicted: 4.3, confidence: 88 },
-    { month: 'Май', actual: null, predicted: 4.4, confidence: 85 },
-    { month: 'Июн', actual: null, predicted: 4.2, confidence: 82 }
-  ];
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        // Load trends
+        const id = Number(targetId);
+        const trends = scope === 'course'
+          ? await analyticsApi.getCourseTrends(id, { days: 60, bucket })
+          : await analyticsApi.getStudentTrends(id, { days: 60, bucket });
+        setTrendSeries(Array.isArray(trends.series) ? trends.series : []);
+
+        // Map horizon UI to days
+        const horizonDays = predictionHorizon === 'week' ? 7 : predictionHorizon === 'month' ? 30 : predictionHorizon === 'quarter' ? 90 : 180;
+        const pred = await analyticsApi.predictPerformance({ scope, targetId: id, horizonDays, bucket: bucket === 'week' ? 'week' : 'day' });
+        setForecast(Array.isArray(pred.forecast) ? pred.forecast : []);
+      } catch (e) {
+        setError(e.message || 'Не удалось загрузить прогноз');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, targetId, predictionHorizon, bucket]);
 
   const riskPredictions = [
     { name: 'Иванов А.', currentGrade: 4.2, predictedGrade: 3.8, riskLevel: 'medium', probability: 65 },
@@ -23,16 +48,7 @@ const PredictionsTab = ({ period, analysisType }) => {
     { name: 'Морозов И.', currentGrade: 4.0, predictedGrade: 3.6, riskLevel: 'medium', probability: 71 }
   ];
 
-  const engagementForecast = [
-    { week: 'Нед 1', engagement: 85, predicted: 85 },
-    { week: 'Нед 2', engagement: 82, predicted: 83 },
-    { week: 'Нед 3', engagement: 88, predicted: 87 },
-    { week: 'Нед 4', engagement: 84, predicted: 85 },
-    { week: 'Нед 5', engagement: null, predicted: 86 },
-    { week: 'Нед 6', engagement: null, predicted: 88 },
-    { week: 'Нед 7', engagement: null, predicted: 87 },
-    { week: 'Нед 8', engagement: null, predicted: 89 }
-  ];
+  const engagementForecast = forecast.map((f, idx) => ({ week: `T+${idx + 1}`, predicted: f.pred_avg_grade }));
 
   const interventionRecommendations = [
     {
@@ -99,6 +115,23 @@ const PredictionsTab = ({ period, analysisType }) => {
 
   return (
     <div className="space-y-6">
+      {/* Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <select value={scope} onChange={(e) => setScope(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background">
+            <option value="course">Курс</option>
+            <option value="student">Студент</option>
+          </select>
+          <input value={targetId} onChange={(e) => setTargetId(e.target.value)} type="number" min="1" className="w-28 px-3 py-2 border border-border rounded-lg bg-background" placeholder="ID" />
+          <select value={bucket} onChange={(e) => setBucket(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background">
+            <option value="day">Дни</option>
+            <option value="week">Недели</option>
+          </select>
+        </div>
+        <div className="text-sm text-text-secondary">
+          {isLoading ? 'Загрузка прогноза…' : error ? <span className="text-error">{error}</span> : null}
+        </div>
+      </div>
       {/* Model and Horizon Selectors */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex flex-wrap gap-2">
@@ -168,39 +201,20 @@ const PredictionsTab = ({ period, analysisType }) => {
       {selectedModel === 'performance' && (
         <div className="bg-background border border-border rounded-lg p-6">
           <h3 className="text-lg font-heading font-medium text-text-primary mb-4">
-            Прогноз успеваемости
+            Тренды и прогноз успеваемости
           </h3>
           
           <div className="h-80 mb-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={performancePrediction}>
+              <LineChart data={trendSeries}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis domain={[3.5, 4.5]} tick={{ fontSize: 12 }} />
+                <XAxis dataKey="bucket_start" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    value, 
-                    name === 'actual' ? 'Фактический' : 'Прогнозируемый'
-                  ]}
+                  formatter={(value, name) => [value, name === 'average_grade' ? 'Средний балл' : name]}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="actual" 
-                  stroke="#3B82F6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
-                  connectNulls={false}
-                  name="actual"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="predicted" 
-                  stroke="#7C3AED" 
-                  strokeWidth={3}
-                  strokeDasharray="5 5"
-                  dot={{ fill: '#7C3AED', strokeWidth: 2, r: 6 }}
-                  name="predicted"
-                />
+                <Line type="monotone" dataKey="average_grade" stroke="#3B82F6" strokeWidth={3} dot={{ r: 3 }} name="Средний балл" />
+                <Line type="monotone" dataKey="on_time_rate" stroke="#10B981" strokeWidth={2} dot={false} name="Своевременность, %" yAxisId={0} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -252,12 +266,6 @@ const PredictionsTab = ({ period, analysisType }) => {
                 <XAxis dataKey="week" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar 
-                  dataKey="engagement" 
-                  fill="#10B981" 
-                  name="Фактическая"
-                  radius={[4, 4, 0, 0]}
-                />
                 <Bar 
                   dataKey="predicted" 
                   fill="#7C3AED" 

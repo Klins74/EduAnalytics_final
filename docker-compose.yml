@@ -7,33 +7,46 @@ services:
     env_file: ./.env
     container_name: eduanalytics_api
     command: >
-      sh -c "alembic upgrade head && \
-      uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "python scripts/prestart.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./server:/app
     ports:
       - "8000:8000"
     environment:
+      - DB_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
+      - DB_URL_SYNC=postgresql+psycopg2://edua:secret@db:5432/eduanalytics
+      - DATABASE_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
+      - PGCLIENTENCODING=UTF8
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-1.0}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - AI_MODEL=${AI_MODEL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-tinyllama}
     depends_on:
       db:
         condition: service_healthy
       cache:
         condition: service_started
 
-  # Фронтенд сервис на Next.js
+  # Фронтенд сервис на Vite
   ui:
     build: .
     container_name: eduanalytics_ui
     env_file: ./.env
     working_dir: /app
-    command: "npm run dev"
+    command: "npm start -- --port 5173 --host 0.0.0.0"
     volumes:
-      - ./src:/app
+      - .:/app
+      - /app/node_modules
     ports:
-      - "3000:3000"
+      - "5173:5173"
     depends_on:
       - api
 
@@ -66,16 +79,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=canvas
+      - POSTGRES_USER=edua
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=eduanalytics
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d canvas"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U edua -d eduanalytics"]
+    
 
   # Сервис кэширования Redis
   cache:
@@ -96,7 +107,35 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  # Планировщик напоминаний
+  reminder_scheduler:
+    build: ./server
+    container_name: eduanalytics_reminder_scheduler
+    command: python reminder_scheduler.py
+    environment:
+      - DB_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
+      - REDIS_URL=redis://cache:6379
+    depends_on:
+      - db
+      - cache
+      - api
+    volumes:
+      - ./server:/app
+    restart: unless-stopped
+
+  # Локальный сервер моделей Ollama (бесплатно, оффлайн)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: eduanalytics_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   canvas_data:
   elasticsearch_data:
+  n8n_data:
+  ollama:

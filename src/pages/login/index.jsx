@@ -8,8 +8,8 @@ import Icon from '../../components/AppIcon';
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: 'admin@eduanalytics.ru', // Предзаполняем для удобства
-    password: 'admin123'             // Предзаполняем для удобства
+    email: 'admin@example.com',
+    password: 'admin'
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);

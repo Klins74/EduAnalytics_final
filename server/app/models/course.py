@@ -51,4 +51,11 @@ class Course(Base):
     schedules = relationship("Schedule", back_populates="course", cascade="all, delete-orphan")
     assignments = relationship("Assignment", back_populates="course", cascade="all, delete-orphan")
     gradebook_entries = relationship("GradebookEntry", back_populates="course", cascade="all, delete-orphan")
+    quizzes = relationship("Quiz", back_populates="course")
+    # Canvas-like additions
+    modules = relationship("Module", back_populates="course", cascade="all, delete-orphan")
+    assignment_groups = relationship("AssignmentGroup", back_populates="course", cascade="all, delete-orphan")
+    rubrics = relationship("Rubric", back_populates="course", cascade="all, delete-orphan")
+    pages = relationship("Page", back_populates="course", cascade="all, delete-orphan")
+    discussion_topics = relationship("DiscussionTopic", back_populates="course", cascade="all, delete-orphan")
     # enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")  # TODO: Create Enrollment model

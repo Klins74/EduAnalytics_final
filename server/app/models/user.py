@@ -22,3 +22,5 @@ class User(Base):
     gradebook_entries_as_student = relationship("GradebookEntry", foreign_keys="GradebookEntry.student_id", back_populates="student")
     gradebook_entries_as_creator = relationship("GradebookEntry", foreign_keys="GradebookEntry.created_by", back_populates="creator")
     gradebook_history_changes = relationship("GradebookHistory", back_populates="changed_by_user")
+    reminder_settings = relationship("ReminderSettings", back_populates="user")
+    created_quizzes = relationship("Quiz", back_populates="creator")

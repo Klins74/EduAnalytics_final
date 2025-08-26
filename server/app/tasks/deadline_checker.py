@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -41,7 +41,7 @@ class DeadlineChecker:
         """Проверить дедлайны для конкретного интервала времени."""
         try:
             # Вычисляем временной диапазон
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             target_time = now + timedelta(hours=hours)
             tolerance = timedelta(minutes=self.tolerance_minutes)
             
@@ -158,7 +158,7 @@ class DeadlineChecker:
                 return False
             
             # Вычисляем часы до дедлайна
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             time_diff = assignment.due_date - now
             hours_remaining = int(time_diff.total_seconds() / 3600)
             
@@ -178,22 +178,49 @@ class DeadlineChecker:
 
     def _check_deadlines_for_interval_sync(self, hours: int) -> None:
         """Синхронная обёртка для тестов: проверка дедлайнов для интервала."""
-        from app.core.database import get_db
-        for db in get_db():
-            asyncio.run(self._check_deadlines_for_interval(db, hours))
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            async def _run():
+                from app.database import get_async_db
+                async for db in get_async_db():
+                    await self._check_deadlines_for_interval(db, hours)
+            loop.run_until_complete(_run())
+        finally:
+            loop.close()
 
-    def _send_deadline_notification_sync(self, assignment, hours: int) -> None:
+    def _send_deadline_notification_sync(self, assignment, hours: int) -> bool:
         """Синхронная обёртка для тестов: отправка уведомления о дедлайне."""
-        from app.core.database import get_db
-        for db in get_db():
-            asyncio.run(self._send_deadline_notification(db, assignment, hours))
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            async def _run():
+                from app.database import get_async_db
+                async for db in get_async_db():
+                    await self._send_deadline_notification(db, assignment, hours)
+                    return True
+            return loop.run_until_complete(_run())
+        except Exception as e:
+            logger.error(f"Ошибка в _send_deadline_notification_sync: {str(e)}")
+            return False
+        finally:
+            loop.close()
 
     def _get_course_students_sync(self, course_id: int) -> list:
         """Синхронная обёртка для тестов: получить студентов курса."""
-        from app.core.database import get_db
-        for db in get_db():
-            return asyncio.run(self._get_course_students(db, course_id))
-        return []
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            async def _run():
+                from app.database import get_async_db
+                async for db in get_async_db():
+                    return await self._get_course_students(db, course_id)
+            return loop.run_until_complete(_run()) or []
+        except Exception as e:
+            logger.error(f"Ошибка в _get_course_students_sync: {str(e)}")
+            return []
+        finally:
+            loop.close()
 
 
 # Глобальный экземпляр для использования в фоновых задачах

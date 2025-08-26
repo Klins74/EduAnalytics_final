@@ -47,7 +47,7 @@ class Schedule(Base):
     end_time = Column(Time, nullable=False)
     location = Column(String(200), nullable=True)
     instructor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    lesson_type = Column(Enum(LessonType), default=LessonType.LECTURE, nullable=False)
+    lesson_type = Column(String(20), default="lecture", nullable=False)
     description = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     is_cancelled = Column(Integer, default=0, nullable=False)  # 0 = активно, 1 = отменено

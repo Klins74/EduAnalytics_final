@@ -1,7 +1,7 @@
 import os
 import pytest
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/eduanalytics-webhook")
 
@@ -11,7 +11,7 @@ def test_real_n8n_webhook():
     """
     payload = {
         "event_type": "integration_test",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "data": {
             "message": "Integration test from pytest",
             "test": True

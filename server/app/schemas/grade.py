@@ -1,13 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
+from datetime import datetime
 
 class GradeCreate(BaseModel):
-    student_id: int
-    value: int
-    subject: int
+    score: float
+    feedback: Optional[str] = None
+    graded_by: int
+    submission_id: int
 
 class GradeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
-    student_id: int
-    value: int
-    student_name: Optional[str] = None
+    score: float
+    feedback: Optional[str] = None
+    graded_at: datetime
+    graded_by: int
+    submission_id: int

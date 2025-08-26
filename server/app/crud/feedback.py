@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from sqlalchemy import func, desc, and_, select
@@ -271,7 +271,7 @@ class CRUDFeedback:
         limit: int = 50
     ) -> List[Feedback]:
         """Получить недавние комментарии."""
-        since_date = datetime.utcnow() - timedelta(days=days)
+        since_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         result = await db.execute(
             select(Feedback)
@@ -313,7 +313,7 @@ class CRUDFeedback:
         feedbacks_by_submission = submission_result.all()
         
         # Недавние комментарии (за последние 7 дней)
-        recent_date = datetime.utcnow() - timedelta(days=7)
+        recent_date = datetime.now(timezone.utc) - timedelta(days=7)
         recent_query = base_query.filter(Feedback.created_at >= recent_date)
         recent_result = await db.execute(select(func.count()).select_from(recent_query.subquery()))
         recent_feedbacks_count = recent_result.scalar()

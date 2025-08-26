@@ -1,7 +1,8 @@
-from typing import Optional, List
-from sqlalchemy.orm import Session, selectinload
+from typing import Optional, List, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_
+from sqlalchemy import and_, select, func
 from fastapi import HTTPException, status
 import logging
 
@@ -14,34 +15,57 @@ from app.schemas.assignment import AssignmentCreate, AssignmentUpdate
 logger = logging.getLogger(__name__)
 
 
-def get_assignment_by_id(db: Session, assignment_id: int) -> Optional[Assignment]:
+async def get_assignment_by_id(db: AsyncSession, assignment_id: int) -> Optional[Assignment]:
     """Получить задание по ID с загрузкой связанных данных."""
-    return db.query(Assignment).options(
-        selectinload(Assignment.course).selectinload(Course.owner)
-    ).filter(Assignment.id == assignment_id).first()
+    result = await db.execute(
+        select(Assignment).options(
+            selectinload(Assignment.course).selectinload(Course.owner)
+        ).where(Assignment.id == assignment_id)
+    )
+    return result.scalar_one_or_none()
 
 
-def get_assignments(
-    db: Session,
+async def get_assignments(
+    db: AsyncSession,
     course_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100
-) -> tuple[List[Assignment], int]:
+) -> Tuple[List[Assignment], int]:
     """Получить список заданий с пагинацией и фильтрацией по курсу."""
-    query = db.query(Assignment).options(
+    
+    # Базовый запрос
+    query = select(Assignment).options(
         selectinload(Assignment.course).selectinload(Course.owner)
     )
+    count_query = select(func.count(Assignment.id))
     
+    # Применяем фильтр по course_id если указан
     if course_id:
-        query = query.filter(Assignment.course_id == course_id)
+        query = query.where(Assignment.course_id == course_id)
+        count_query = count_query.where(Assignment.course_id == course_id)
     
-    total = query.count()
-    assignments = query.offset(skip).limit(limit).all()
+    # Получаем общее количество
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
     
-    return assignments, total
+    # Получаем задания с пагинацией
+    assignments_result = await db.execute(query.offset(skip).limit(limit))
+    assignments = assignments_result.scalars().all()
+    
+    return list(assignments), total
 
 
-def create_assignment(db: Session, assignment: AssignmentCreate, current_user: User) -> Assignment:
+async def get_assignments_by_course_id(db: AsyncSession, course_id: int) -> List[Assignment]:
+    """Получить все задания для конкретного курса."""
+    result = await db.execute(
+        select(Assignment).options(
+            selectinload(Assignment.course)
+        ).where(Assignment.course_id == course_id)
+    )
+    return list(result.scalars().all())
+
+
+async def create_assignment(db: AsyncSession, assignment: AssignmentCreate, current_user: User) -> Assignment:
     """Создать новое задание с проверками прав и валидацией дедлайна."""
     # Проверка прав пользователя
     if current_user.role not in [UserRole.teacher, UserRole.admin]:
@@ -52,7 +76,10 @@ def create_assignment(db: Session, assignment: AssignmentCreate, current_user: U
         )
     
     # Проверка существования курса
-    course = db.query(Course).filter(Course.id == assignment.course_id).first()
+    course_result = await db.execute(
+        select(Course).where(Course.id == assignment.course_id)
+    )
+    course = course_result.scalar_one_or_none()
     if not course:
         logger.error(f"Попытка создать задание для несуществующего курса {assignment.course_id}")
         raise HTTPException(
@@ -81,17 +108,17 @@ def create_assignment(db: Session, assignment: AssignmentCreate, current_user: U
     
     try:
         db.add(db_assignment)
-        db.commit()
-        db.refresh(db_assignment)
+        await db.commit()
+        await db.refresh(db_assignment)
         
         # Загрузка связанных данных
-        db_assignment = get_assignment_by_id(db, db_assignment.id)
+        db_assignment = await get_assignment_by_id(db, db_assignment.id)
         
         logger.info(f"Задание '{db_assignment.title}' создано пользователем {current_user.id} для курса {assignment.course_id}")
         return db_assignment
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Ошибка создания задания: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -99,14 +126,14 @@ def create_assignment(db: Session, assignment: AssignmentCreate, current_user: U
         )
 
 
-def update_assignment(
-    db: Session,
+async def update_assignment(
+    db: AsyncSession,
     assignment_id: int,
     assignment_update: AssignmentUpdate,
     current_user: User
 ) -> Optional[Assignment]:
     """Обновить задание с проверкой прав и валидацией."""
-    db_assignment = get_assignment_by_id(db, assignment_id)
+    db_assignment = await get_assignment_by_id(db, assignment_id)
     if not db_assignment:
         return None
     
@@ -134,14 +161,14 @@ def update_assignment(
         setattr(db_assignment, field, value)
     
     try:
-        db.commit()
-        db.refresh(db_assignment)
+        await db.commit()
+        await db.refresh(db_assignment)
         
         logger.info(f"Задание {assignment_id} обновлено пользователем {current_user.id}")
-        return get_assignment_by_id(db, assignment_id)
+        return await get_assignment_by_id(db, assignment_id)
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Ошибка обновления задания: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -149,9 +176,9 @@ def update_assignment(
         )
 
 
-def delete_assignment(db: Session, assignment_id: int, current_user: User) -> bool:
+async def delete_assignment(db: AsyncSession, assignment_id: int, current_user: User) -> bool:
     """Удалить задание с проверкой прав."""
-    db_assignment = get_assignment_by_id(db, assignment_id)
+    db_assignment = await get_assignment_by_id(db, assignment_id)
     if not db_assignment:
         return False
     
@@ -164,14 +191,14 @@ def delete_assignment(db: Session, assignment_id: int, current_user: User) -> bo
         )
     
     try:
-        db.delete(db_assignment)
-        db.commit()
+        await db.delete(db_assignment)
+        await db.commit()
         
         logger.info(f"Задание {assignment_id} удалено пользователем {current_user.id}")
         return True
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Ошибка удаления задания {assignment_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -41,7 +41,7 @@ async def create_group(db: AsyncSession, group_in: GroupCreate) -> Group:
     :param group_in: Данные для создания группы
     :return: Созданный объект Group
     """
-    group = Group(**group_in.dict())
+    group = Group(**group_in.model_dump())
     db.add(group)
     await db.commit()
     await db.refresh(group)

@@ -10,6 +10,7 @@ class WebhookEventType(str, Enum):
     GRADE_CREATED = "grade_created"
     FEEDBACK_CREATED = "feedback_created"
     SCHEDULE_UPDATED = "schedule_updated"
+    TEST_NOTIFICATION = "test_notification"
 
 
 class WebhookNotifyRequest(BaseModel):

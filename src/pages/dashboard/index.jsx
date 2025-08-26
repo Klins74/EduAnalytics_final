@@ -10,6 +10,7 @@ import ActivityChart from './components/ActivityChart';
 import QuickActions from './components/QuickActions';
 import RecentActivity from './components/RecentActivity';
 import SentryTest from '../../components/SentryTest';
+import AIInsights from '../../components/ui/AIInsights';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const Dashboard = () => {
       }
       
       try {
-        const response = await fetch('http://localhost:8000/api/dashboard/kpi', {
+        const response = await fetch('http://localhost:8000/api/analytics/dashboard/summary', {
           headers: {
             // Отправляем токен в заголовке для аутентификации
             'Authorization': `Bearer ${token}` 
@@ -50,7 +51,55 @@ const Dashboard = () => {
         }
 
         const data = await response.json();
-        setKpiData(data); // Сохраняем полученные с сервера данные в состояние
+        const overview = data?.system_overview || {};
+
+        const kpis = [
+          {
+            id: 'students',
+            title: 'Всего студентов',
+            value: (overview.total_students ?? 0).toLocaleString('ru-RU'),
+            change: '0%',
+            changeType: 'positive',
+            icon: 'Users',
+            color: 'primary',
+            description: 'Активных студентов в системе'
+          },
+          {
+            id: 'courses',
+            title: 'Активные курсы',
+            value: `${overview.active_courses ?? 0} / ${overview.total_courses ?? 0}`,
+            change: '0%',
+            changeType: 'positive',
+            icon: 'BookOpen',
+            color: 'secondary',
+            description: 'Активных / всего курсов'
+          },
+          {
+            id: 'assignments',
+            title: 'Всего заданий',
+            value: (overview.total_assignments ?? 0).toLocaleString('ru-RU'),
+            change: '0%',
+            changeType: 'positive',
+            icon: 'FileText',
+            color: 'accent',
+            description: 'Задания во всех курсах'
+          },
+          {
+            id: 'avg-grade',
+            title: 'Средний балл',
+            value: String(
+              typeof overview.system_average_grade === 'number'
+                ? overview.system_average_grade.toFixed(2)
+                : overview.system_average_grade ?? '0.00'
+            ),
+            change: '0',
+            changeType: 'positive',
+            icon: 'Award',
+            color: 'success',
+            description: 'Средний балл по системе'
+          }
+        ];
+        setKpiData(kpis);
 
       } catch (error) {
         console.error("Ошибка при загрузке KPI:", error);
@@ -182,8 +231,13 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="mb-8">
-            <RecentActivity />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            <div>
+              <RecentActivity />
+            </div>
+            <div>
+              <AIInsights context="teacher-dashboard" />
+            </div>
           </div>
 
           <div className="mb-8">

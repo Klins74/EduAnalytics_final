@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Analytics Tools</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .response {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .fail {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test AI Analytics Tools with Ollama</h1>
+        
+        <div class="test-section">
+            <h2>Login</h2>
+            <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="admin@example.com">
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="admin">
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="login-response" class="response"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Analytics Tools</h2>
+            <div>
+                <label for="analytics-query-select">Select a query or write your own:</label>
+                <select id="analytics-query-select" onchange="updateAnalyticsQuery()">
+                    <option value="">-- Select a query --</option>
+                    <option value="Сравни успеваемость студентов 1 и 2">Сравнение успеваемости студентов</option>
+                    <option value="Какие рекомендации есть для студента с ID 2?">Рекомендации для студента</option>
+                    <option value="Покажи тенденции успеваемости для группы 1 за семестр">Тенденции успеваемости группы</option>
+                    <option value="Сравни успеваемость студентов 1 и 2 по курсу 1">Сравнение по конкретному курсу</option>
+                </select>
+            </div>
+            <div>
+                <label for="analytics-query">Query:</label>
+                <textarea id="analytics-query" rows="4"></textarea>
+            </div>
+            <button onclick="testAnalyticsTools()">Send Query</button>
+            <div id="analytics-response" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        let token = '';
+        
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginResponse = document.getElementById('login-response');
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'username': email,
+                        'password': password
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    token = data.access_token;
+                    localStorage.setItem('accessToken', token);
+                    loginResponse.innerHTML = `<span class="status success">SUCCESS</span>\nToken: ${token.substring(0, 20)}...`;
+                    loginResponse.classList.remove('error');
+                } else {
+                    loginResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${JSON.stringify(data)}`;
+                    loginResponse.classList.add('error');
+                }
+            } catch (error) {
+                loginResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${error.message}`;
+                loginResponse.classList.add('error');
+            }
+        }
+        
+        function updateAnalyticsQuery() {
+            const select = document.getElementById('analytics-query-select');
+            const query = document.getElementById('analytics-query');
+            query.value = select.value;
+        }
+        
+        async function testAnalyticsTools() {
+            const message = document.getElementById('analytics-query').value;
+            const analyticsResponse = document.getElementById('analytics-response');
+            
+            if (!token) {
+                analyticsResponse.innerHTML = `<span class="status fail">FAIL</span>\nPlease login first`;
+                analyticsResponse.classList.add('error');
+                return;
+            }
+            
+            if (!message) {
+                analyticsResponse.innerHTML = `<span class="status fail">FAIL</span>\nPlease enter a query`;
+                analyticsResponse.classList.add('error');
+                return;
+            }
+            
+            analyticsResponse.innerHTML = `<span class="status">LOADING...</span>`;
+            analyticsResponse.classList.remove('error');
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch('http://localhost:8000/api/ai/function', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ message }),
+                });
+                
+                const data = await response.json();
+                const endTime = performance.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+                
+                if (response.ok) {
+                    analyticsResponse.innerHTML = `<span class="status success">SUCCESS</span> (${duration}s)\n\n${data.reply}`;
+                    analyticsResponse.classList.remove('error');
+                } else {
+                    analyticsResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${JSON.stringify(data)}`;
+                    analyticsResponse.classList.add('error');
+                }
+            } catch (error) {
+                analyticsResponse.innerHTML = `<span class="status fail">FAIL</span>\nError: ${error.message}`;
+                analyticsResponse.classList.add('error');
+            }
+        }
+
+        // Check if we already have a token in localStorage
+        window.onload = function() {
+            const storedToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+            if (storedToken) {
+                token = storedToken;
+                document.getElementById('login-response').innerHTML = `<span class="status success">ALREADY LOGGED IN</span>\nToken: ${token.substring(0, 20)}...`;
+            }
+        };
+    </script>
+</body>
+</html>

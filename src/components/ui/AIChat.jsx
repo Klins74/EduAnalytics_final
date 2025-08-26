@@ -14,6 +14,23 @@ const AIChat = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  // Intent modal state
+  const [showIntentModal, setShowIntentModal] = useState(false);
+  const [intentLoading, setIntentLoading] = useState(false);
+  const [intentError, setIntentError] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [intentForm, setIntentForm] = useState({
+    course_id: '',
+    instructor_id: '',
+    schedule_date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    lesson_type: 'lecture',
+    description: 'Создано через AI'
+  });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -40,29 +57,197 @@ const AIChat = () => {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) {
+        const aiResponse = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: 'Требуется авторизация. Пожалуйста, войдите в систему.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsTyping(false);
+        return;
+      }
+
+      const scope = (() => {
+        const p = window.location.pathname || '';
+        if (p.includes('student')) return 'student';
+        if (p.includes('teacher')) return 'teacher';
+        if (p.includes('schedule')) return 'schedule';
+        if (p.includes('analytics')) return 'analytics';
+        return 'general';
+      })();
+
+      const contextPayload = {
+        context: `Page: ${window.location.pathname} | Title: ${document.title}`,
+        scope
+      };
+
+      // Включить стриминг при длинных запросах
+      const useStream = inputValue.length > 120;
+      const url = useStream ? 'http://localhost:8000/api/ai/chat/stream' : 'http://localhost:8000/api/ai/chat';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: inputValue, ...contextPayload })
+      });
+
+      if (!useStream) {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const aiResponse = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: data.reply || 'Пустой ответ от AI',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      } else {
+        // Чтение SSE-потока
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let accumulated = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          for (const part of parts) {
+            if (part.startsWith('data: ')) {
+              const chunk = part.replace(/^data: /, '');
+              if (chunk !== '[END]') accumulated += chunk;
+            }
+          }
+        }
+        const aiResponse = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: accumulated || 'Пустой ответ от AI',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      }
+
+      // Try intent extraction for actionable commands (e.g., create schedule)
+      try {
+        setIntentLoading(true);
+        setIntentError('');
+        const intentRes = await fetch('http://localhost:8000/api/ai/intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ message: currentInput })
+        });
+        if (intentRes.ok) {
+          const intent = await intentRes.json();
+          if (intent.action === 'create_schedule') {
+            // Prefill modal with intent params
+            const p = intent.params || {};
+            setIntentForm(prev => ({
+              ...prev,
+              course_id: String(p.course_id ?? prev.course_id ?? ''),
+              instructor_id: String(p.instructor_id ?? prev.instructor_id ?? ''),
+              schedule_date: p.schedule_date ?? prev.schedule_date ?? '',
+              start_time: p.start_time ?? prev.start_time ?? '',
+              end_time: p.end_time ?? prev.end_time ?? '',
+              location: p.location ?? prev.location ?? '',
+              lesson_type: p.lesson_type ?? prev.lesson_type ?? 'lecture',
+              description: p.description ?? prev.description ?? 'Создано через AI'
+            }));
+            setShowIntentModal(true);
+          }
+        }
+      } catch (ie) {
+        setIntentError(String(ie));
+      } finally {
+        setIntentLoading(false);
+      }
+    } catch (err) {
       const aiResponse = {
         id: Date.now() + 1,
         type: 'ai',
-        content: generateAIResponse(inputValue),
+        content: `Ошибка AI: ${String(err)}`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
-  const generateAIResponse = (userInput) => {
-    const responses = [
-      'Анализирую данные студентов... Обнаружил интересные тенденции в успеваемости.',
-      'Рекомендую обратить внимание на студентов с низкой активностью в последние 7 дней.',
-      'Статистика показывает улучшение результатов после внедрения новых методик.',
-      'Могу создать персонализированный отчет по любому студенту или группе.',
-      'Выявлены паттерны, которые могут помочь в прогнозировании успеваемости.',
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  const fetchFreeSlots = async () => {
+    try {
+      setSlotsLoading(true);
+      setSuggestions([]);
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) throw new Error('Требуется авторизация');
+      const params = new URLSearchParams({
+        schedule_date: intentForm.schedule_date,
+        instructor_id: String(intentForm.instructor_id || ''),
+        duration_minutes: '90'
+      });
+      const r = await fetch(`http://localhost:8000/api/schedule/ai-free-slots?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setSuggestions(data.suggestions || []);
+    } catch (e) {
+      setIntentError(String(e));
+    } finally {
+      setSlotsLoading(false);
+    }
   };
+
+  const submitCreateSchedule = async () => {
+    try {
+      setCreateLoading(true);
+      setIntentError('');
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) throw new Error('Требуется авторизация');
+      const payload = {
+        course_id: Number(intentForm.course_id),
+        instructor_id: Number(intentForm.instructor_id),
+        schedule_date: intentForm.schedule_date,
+        start_time: intentForm.start_time,
+        end_time: intentForm.end_time,
+        location: intentForm.location || undefined,
+        lesson_type: intentForm.lesson_type || 'lecture',
+        description: intentForm.description || 'Создано через AI'
+      };
+      const r = await fetch('http://localhost:8000/api/schedule/ai-create', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const text = await r.text();
+      if (!r.ok) throw new Error(text || `HTTP ${r.status}`);
+      // Success feedback in chat
+      const resp = {
+        id: Date.now() + 2,
+        type: 'ai',
+        content: `Занятие создано. Ответ сервера: ${text}`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, resp]);
+      setShowIntentModal(false);
+    } catch (e) {
+      setIntentError(String(e));
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // удалена заглушка generateAIResponse — теперь используется реальный API
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
@@ -306,6 +491,48 @@ const AIChat = () => {
                     </button>
                   </form>
                 </div>
+                {/* Intent Modal */}
+                {showIntentModal && (
+                  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-900">
+                    <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-lg font-semibold">Подтвердить создание занятия</h3>
+                        <button onClick={() => setShowIntentModal(false)} className="p-1 hover:bg-gray-100 rounded">✕</button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input className="border rounded px-2 py-1" placeholder="Курс ID" value={intentForm.course_id} onChange={e=>setIntentForm({...intentForm, course_id: e.target.value})} />
+                          <input className="border rounded px-2 py-1" placeholder="Преподаватель ID" value={intentForm.instructor_id} onChange={e=>setIntentForm({...intentForm, instructor_id: e.target.value})} />
+                          <input className="border rounded px-2 py-1" type="date" value={intentForm.schedule_date} onChange={e=>setIntentForm({...intentForm, schedule_date: e.target.value})} />
+                          <input className="border rounded px-2 py-1" placeholder="Аудитория" value={intentForm.location} onChange={e=>setIntentForm({...intentForm, location: e.target.value})} />
+                          <input className="border rounded px-2 py-1" placeholder="Начало (HH:MM)" value={intentForm.start_time} onChange={e=>setIntentForm({...intentForm, start_time: e.target.value})} />
+                          <input className="border rounded px-2 py-1" placeholder="Окончание (HH:MM)" value={intentForm.end_time} onChange={e=>setIntentForm({...intentForm, end_time: e.target.value})} />
+                        </div>
+                        {intentError && <div className="text-sm text-red-600">{intentError}</div>}
+                        <div className="flex items-center gap-2">
+                          <button className="px-3 py-2 bg-primary text-white rounded disabled:opacity-50" disabled={createLoading} onClick={submitCreateSchedule} type="button">
+                            {createLoading ? 'Создаю...' : 'Создать'}
+                          </button>
+                          <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" disabled={slotsLoading} onClick={fetchFreeSlots} type="button">
+                            {slotsLoading ? 'Ищу слоты...' : 'Предложить другое время'}
+                          </button>
+                        </div>
+                        {suggestions.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-sm text-gray-600 mb-1">Свободные варианты:</div>
+                            <div className="flex flex-wrap gap-2">
+                              {suggestions.map((s, idx) => (
+                                <button key={idx} onClick={()=>setIntentForm({...intentForm, start_time: s.start_time, end_time: s.end_time})} className="px-2 py-1 bg-gray-100 rounded border">
+                                  {s.start_time} — {s.end_time}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -6,11 +6,21 @@ from sqlalchemy.engine import Connection
 from alembic import context
 import os
 from app.db.base import Base
+from app.core.config import settings
 from app.models import user, group, student, grade, course, assignment, submission, gradebook, feedback, schedule
 
 target_metadata = Base.metadata
 
-DB_URL = os.getenv("DB_URL_SYNC") or os.getenv("DB_URL") or os.getenv("DATABASE_URL") or "postgresql+psycopg2://edua:secret@db:5432/eduanalytics"
+# Ensure UTF-8 client encoding for psycopg2
+os.environ.setdefault("PGCLIENTENCODING", "UTF8")
+
+# Prefer explicit env, then application settings (local defaults)
+DB_URL = (
+    os.getenv("DB_URL_SYNC")
+    or os.getenv("DB_URL")
+    or os.getenv("DATABASE_URL")
+    or settings.get_db_url(for_migration=True)
+)
 config = context.config
 config.set_main_option("sqlalchemy.url", DB_URL)
 
