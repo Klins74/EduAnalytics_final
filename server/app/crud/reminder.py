@@ -183,14 +183,20 @@ class CRUDReminder:
         schedule: Schedule
     ) -> List[ScheduledReminder]:
         """Создать напоминания для нового занятия"""
-        # Получаем всех студентов курса
-        from app.models.student import Student
-        from app.models.course import Course
+        # Получаем всех активных студентов курса через enrollments
+        from app.models.enrollment import Enrollment, EnrollmentRole, EnrollmentStatus
+        from app.models.user import User
         
         result = await db.execute(
-            select(Student)
-            .join(Course, Student.groups.any())  # Упрощенно, нужно доработать связи
-            .filter(Course.id == schedule.course_id)
+            select(User)
+            .join(Enrollment, User.id == Enrollment.user_id)
+            .filter(
+                and_(
+                    Enrollment.course_id == schedule.course_id,
+                    Enrollment.role == EnrollmentRole.student,
+                    Enrollment.status == EnrollmentStatus.active
+                )
+            )
         )
         students = result.scalars().all()
         
@@ -206,7 +212,7 @@ class CRUDReminder:
             # Получаем настройки напоминаний студента
             setting = await self.get_user_reminder_setting(
                 db, 
-                student.user_id, 
+                student.id, 
                 ReminderType.SCHEDULE_UPCOMING
             )
             
@@ -216,7 +222,7 @@ class CRUDReminder:
                 # Создаем напоминание только если время еще не прошло
                 if send_time > datetime.now().replace(tzinfo=None):
                     reminder_data = ScheduledReminderCreate(
-                        user_id=student.user_id,
+                        user_id=student.id,
                         schedule_id=schedule.id,
                         reminder_type=ReminderType.SCHEDULE_UPCOMING,
                         notification_channel=setting.notification_channel,

@@ -5,7 +5,7 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
-from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook, analytics, notifications, reminders, ai, module as module_routes, assignment_group as assignment_group_routes, rubric as rubric_routes, page as page_routes, discussion as discussion_routes, quiz as quiz_routes
+from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook, analytics, notifications, reminders, ai, module as module_routes, assignment_group as assignment_group_routes, rubric as rubric_routes, page as page_routes, discussion as discussion_routes, quiz as quiz_routes, enrollment, in_app_notifications
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.models.group import Group
@@ -26,23 +26,40 @@ import json
 # Создаем контекст для хеширования пароля
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Создаем logger
+logger = logging.getLogger(__name__)
+
 async def create_initial_data():
     """Создает администратора и тестовую группу, если их нет."""
     async with AsyncSessionLocal() as session:
         # Проверяем, есть ли уже пользователь-админ
         result = await session.execute(select(User).where(User.role == "admin"))
         if not result.scalars().first():
-            print("--- Создание начального администратора ---")
-            admin_user_in = UserCreate(
-                username="admin@example.com",
-                role="admin",
-                password="admin"
-            )
-            # В реальном приложении пароль нужно брать из .env
-            hashed_password = pwd_context.hash(admin_user_in.password)
-            admin_user = User(username=admin_user_in.username, role=admin_user_in.role, hashed_password=hashed_password)
-            session.add(admin_user)
-            print("--- Администратор создан ---")
+            # Получаем данные администратора из переменных окружения
+            admin_username = os.getenv("ADMIN_USERNAME", "admin@eduanalytics.local")
+            admin_password = os.getenv("ADMIN_PASSWORD")
+            admin_email = os.getenv("ADMIN_EMAIL", admin_username)
+            
+            # Проверяем, что пароль установлен
+            if not admin_password:
+                logger.warning("ADMIN_PASSWORD не установлен. Пропускаем создание администратора.")
+                logger.warning("Установите ADMIN_PASSWORD в переменных окружения для автоматического создания администратора.")
+            else:
+                print(f"--- Создание администратора: {admin_username} ---")
+                admin_user_in = UserCreate(
+                    username=admin_username,
+                    role="admin",
+                    password=admin_password
+                )
+                
+                hashed_password = pwd_context.hash(admin_user_in.password)
+                admin_user = User(
+                    username=admin_user_in.username, 
+                    role=admin_user_in.role, 
+                    hashed_password=hashed_password
+                )
+                session.add(admin_user)
+                print(f"--- Администратор {admin_username} создан ---")
 
         # Проверяем, есть ли уже группы
         result = await session.execute(select(Group))
@@ -74,12 +91,62 @@ if sentry_dsn:
     )
 
 # Настройка CORS
+def is_production():
+    """Определить, запущено ли приложение в продакшене"""
+    return os.getenv("ENVIRONMENT", "development").lower() == "production"
+
+def get_cors_origins():
+    """Получить список разрешенных CORS origins из переменных окружения"""
+    cors_origins_env = os.getenv("CORS_ORIGINS")
+    
+    if cors_origins_env:
+        # Парсим список доменов из переменной окружения (разделенные запятой)
+        origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+        logger.info(f"CORS origins from environment: {origins}")
+        return origins
+    else:
+        # Дефолтные origins для разработки
+        default_origins = [
+            "http://localhost:4028", 
+            "http://127.0.0.1:4028", 
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000"
+        ]
+        if is_production():
+            logger.warning("CORS_ORIGINS не установлен в продакшене! Используются небезопасные дефолтные origins для разработки.")
+            logger.warning("Установите CORS_ORIGINS в переменных окружения для безопасности.")
+        else:
+            logger.info(f"Using default CORS origins for development: {default_origins}")
+        return default_origins
+
+def get_cors_headers():
+    """Получить разрешенные headers для CORS"""
+    if is_production():
+        # В продакшене используем более строгий список headers
+        return [
+            "Accept",
+            "Accept-Language",
+            "Content-Language",
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "X-CSRFToken"
+        ]
+    else:
+        # В разработке разрешаем все headers
+        return ["*"]
+
+cors_origins = get_cors_origins()
+cors_headers = get_cors_headers()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4028", "http://127.0.0.1:4028", "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=cors_headers,
 )
 
 # Подключение маршрутов пользователей
@@ -115,6 +182,8 @@ app.include_router(assignment_group_routes.router, prefix="/api")
 app.include_router(rubric_routes.router, prefix="/api")
 app.include_router(page_routes.router, prefix="/api")
 app.include_router(discussion_routes.router, prefix="/api")
+app.include_router(enrollment.router, prefix="/api/enrollments", tags=["Enrollments"])
+app.include_router(in_app_notifications.router, prefix="/api/notifications/in-app", tags=["In-App Notifications"])
 
 # Health check endpoint
 @app.get("/", tags=["Health Check"])
@@ -147,7 +216,7 @@ notification_service = NotificationService(settings=settings)
 async def startup_event():
     logging.basicConfig(level=logging.INFO)
     logging.info("FastAPI startup event triggered.")
-    await create_initial_data()
+    # create_initial_data() уже вызывается в lifespan
     logging.info(json.dumps({"event": "startup", "status": "ok", "db_url": settings.DB_URL, "db_url_sync": getattr(settings, "DB_URL_SYNC", None)}))
     if settings.DEADLINE_CHECK_ENABLED:
         start_deadline_scheduler(notification_service, interval=settings.DEADLINE_CHECK_INTERVAL)

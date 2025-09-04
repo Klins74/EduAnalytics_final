@@ -9,6 +9,7 @@ from app.core.security import require_role
 from app.models.user import User, UserRole
 from app.schemas.assignment import AssignmentCreate, AssignmentRead, AssignmentUpdate, AssignmentList
 from app.crud import assignment as crud_assignment
+from app.services.cache import analytics_cache
 
 router = APIRouter(
 
@@ -93,11 +94,14 @@ async def create_assignment(
     - Дедлайн должен быть в пределах периода курса
     """
     
-    return await crud_assignment.create_assignment(
+    created = await crud_assignment.create_assignment(
         db=db,
         assignment=assignment,
         current_user=current_user
     )
+    # Invalidate analytics for the course
+    await analytics_cache.invalidate_course(assignment.course_id)
+    return created
 
 
 @router.put(
@@ -130,6 +134,8 @@ async def update_assignment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Задание не найдено"
         )
+    # Invalidate analytics for the course
+    await analytics_cache.invalidate_course(assignment.course_id)
     return assignment
 
 
@@ -150,6 +156,8 @@ async def delete_assignment(
     - Задание должно существовать
     - Пользователь должен быть владельцем курса или администратором
     """
+    # Get assignment to know course_id
+    existing = await crud_assignment.get_assignment_by_id(db, assignment_id)
     success = await crud_assignment.delete_assignment(
         db=db,
         assignment_id=assignment_id,
@@ -160,3 +168,6 @@ async def delete_assignment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Задание не найдено"
         )
+    # Invalidate analytics for the course
+    if success and existing:
+        await analytics_cache.invalidate_course(existing.course_id)

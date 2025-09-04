@@ -16,6 +16,7 @@ from app.schemas.submission import (
 )
 from app.schemas.grade import GradeCreate, GradeResponse
 from app.crud import submission as crud_submission
+from app.services.cache import analytics_cache
 
 
 router = APIRouter()
@@ -167,6 +168,11 @@ async def create_submission(
             current_user=current_user
         )
         logging.info(f"Submission created successfully: ID={db_submission.id}")
+        # Invalidate analytics caches related to the assignment/course and student
+        if hasattr(db_submission, 'assignment_id'):
+            # Try to clear course caches via assignment's course id if resolvable in CRUD (not here)
+            pass
+        await analytics_cache.invalidate_student(current_user.id)
         return db_submission
     except HTTPException:
         raise
@@ -218,6 +224,7 @@ async def update_submission(
             )
         
         logging.info(f"Submission {submission_id} updated successfully")
+        await analytics_cache.invalidate_student(current_user.id)
         return updated_submission
     except HTTPException:
         raise
@@ -253,6 +260,8 @@ async def delete_submission(
     При удалении сдачи также удаляются все связанные оценки.
     """
     try:
+        # Fetch to invalidate correct student
+        existing = await crud_submission.get_submission(db=db, submission_id=submission_id)
         deleted = await crud_submission.delete_submission(
             db=db,
             submission_id=submission_id,
@@ -266,6 +275,8 @@ async def delete_submission(
             )
         
         logging.info(f"Submission {submission_id} deleted successfully")
+        if existing:
+            await analytics_cache.invalidate_student(existing.student_id)
     except HTTPException:
         raise
     except Exception as e:

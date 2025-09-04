@@ -66,38 +66,40 @@ class ReminderService:
             if reminder.assignment_id:
                 notification_data["assignment_id"] = reminder.assignment_id
             
-            # Выбираем метод отправки в зависимости от канала
-            if reminder.notification_channel == NotificationChannel.EMAIL:
-                await self.notification_service.send_notification(
-                    notification_type="reminder",
-                    data=notification_data,
-                    channel="email"
-                )
-            elif reminder.notification_channel == NotificationChannel.SMS:
-                await self.notification_service.send_notification(
-                    notification_type="reminder",
-                    data=notification_data,
-                    channel="sms"
-                )
-            elif reminder.notification_channel == NotificationChannel.PUSH:
-                await self.notification_service.send_notification(
-                    notification_type="reminder",
-                    data=notification_data,
-                    channel="push"
-                )
-            elif reminder.notification_channel == NotificationChannel.IN_APP:
-                await self.notification_service.send_notification(
-                    notification_type="reminder",
-                    data=notification_data,
-                    channel="in_app"
-                )
-            else:
-                # Дефолт - webhook
-                await self.notification_service.send_notification(
-                    notification_type="reminder",
-                    data=notification_data,
-                    channel="webhook"
-                )
+            # Импортируем нужные классы для NotificationService
+            from app.services.notification import NotificationChannel as NotifChannel, NotificationPriority
+            
+            # Маппинг каналов из reminder на notification
+            channel_mapping = {
+                NotificationChannel.EMAIL: NotifChannel.EMAIL,
+                NotificationChannel.SMS: NotifChannel.SMS,
+                NotificationChannel.PUSH: NotifChannel.PUSH,
+                NotificationChannel.IN_APP: NotifChannel.IN_APP
+            }
+            
+            # Определяем канал для отправки
+            notification_channel = channel_mapping.get(
+                reminder.notification_channel, 
+                NotifChannel.WEBHOOK
+            )
+            
+            # Подготавливаем получателей (если есть информация о пользователе)
+            recipients = []
+            if hasattr(reminder, 'user') and reminder.user:
+                recipients = [{
+                    "user_id": reminder.user_id,
+                    "email": getattr(reminder.user, 'email', None),
+                    "name": getattr(reminder.user, 'username', None)
+                }]
+            
+            # Отправляем уведомление с правильной сигнатурой
+            await self.notification_service.send_notification(
+                event_type="reminder",
+                data=notification_data,
+                channels=[notification_channel],
+                priority=NotificationPriority.NORMAL,
+                recipients=recipients
+            )
             
             return True
             
@@ -125,23 +127,33 @@ class ReminderService:
                 "is_test": True
             }
             
-            # Отправляем через выбранный канал
+            # Отправляем через выбранный канал с правильной сигнатурой
+            from app.services.notification import NotificationChannel as NotifChannel, NotificationPriority
+            
             channel_map = {
-                NotificationChannel.EMAIL: "email",
-                NotificationChannel.SMS: "sms", 
-                NotificationChannel.PUSH: "push",
-                NotificationChannel.IN_APP: "in_app"
+                NotificationChannel.EMAIL: NotifChannel.EMAIL,
+                NotificationChannel.SMS: NotifChannel.SMS, 
+                NotificationChannel.PUSH: NotifChannel.PUSH,
+                NotificationChannel.IN_APP: NotifChannel.IN_APP
             }
             
-            channel = channel_map.get(test_request.notification_channel, "webhook")
-            
-            await self.notification_service.send_notification(
-                notification_type="test_reminder",
-                data=notification_data,
-                channel=channel
+            notification_channel = channel_map.get(
+                test_request.notification_channel, 
+                NotifChannel.WEBHOOK
             )
             
-            logger.info(f"Sent test reminder to user {user_id} via {channel}")
+            # Подготавливаем получателей для тестового уведомления
+            recipients = [{"user_id": user_id}]
+            
+            await self.notification_service.send_notification(
+                event_type="test_reminder",
+                data=notification_data,
+                channels=[notification_channel],
+                priority=NotificationPriority.LOW,
+                recipients=recipients
+            )
+            
+            logger.info(f"Sent test reminder to user {user_id} via {notification_channel.value}")
             return True
             
         except Exception as e:

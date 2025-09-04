@@ -9,3 +9,5 @@ from .course import *
 from .assignment import *
 from .schedule import *
 from .submission import *
+from .enrollment import *
+from .notification import *

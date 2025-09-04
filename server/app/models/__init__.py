@@ -15,3 +15,6 @@ from .assignment_group import AssignmentGroup
 from .rubric import Rubric, RubricCriterion
 from .page import Page
 from .discussion import DiscussionTopic, DiscussionEntry
+from .enrollment import Enrollment, EnrollmentRole, EnrollmentStatus
+from .notification import InAppNotification, NotificationPreferences, NotificationStatus, NotificationType, NotificationPriority
+from .notification_log import NotificationLog, NotificationLogStatus

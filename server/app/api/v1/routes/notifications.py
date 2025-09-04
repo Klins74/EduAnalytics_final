@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -180,35 +180,39 @@ async def get_notification_templates(
 
 @router.get("/stats", response_model=NotificationStats)
 async def get_notification_stats(
+    days_back: int = Query(30, ge=1, le=365, description="Количество дней для анализа"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(["admin"]))
 ):
-    """Получить статистику по уведомлениям."""
-    # TODO: Реализовать подсчет статистики из БД
-    stats = {
-        "total_sent": 0,
-        "total_failed": 0,
-        "by_channel": {
-            "webhook": {"sent": 0, "failed": 0},
-            "email": {"sent": 0, "failed": 0},
-            "sms": {"sent": 0, "failed": 0},
-            "push": {"sent": 0, "failed": 0}
-        },
-        "by_priority": {
-            "low": 0,
-            "normal": 0,
-            "high": 0,
-            "urgent": 0
-        },
-        "by_event_type": {
-            "deadline_approaching": 0,
-            "grade_created": 0,
-            "schedule_updated": 0,
-            "assignment_created": 0
-        }
-    }
+    """Получить статистику по уведомлениям из базы данных."""
+    from app.crud.notification_log import notification_log_crud
     
-    return stats
+    # Получаем статистику из БД
+    stats = await notification_log_crud.get_notification_stats(
+        db=db,
+        days_back=days_back
+    )
+    
+    # Дополняем статистику метриками производительности
+    performance = await notification_log_crud.get_performance_metrics(
+        db=db,
+        days_back=min(days_back, 7)  # Метрики производительности за последние 7 дней максимум
+    )
+    
+    # Формируем ответ в ожидаемом формате
+    return {
+        "total_sent": stats["total_sent"],
+        "total_failed": stats["total_failed"],
+        "total_notifications": stats["total_notifications"],
+        "total_recipients": stats["total_recipients"],
+        "success_rate": stats["success_rate"],
+        "by_channel": stats["by_channel"],
+        "by_priority": stats["by_priority"],
+        "by_event_type": stats["by_event_type"],
+        "recent_24h": stats["recent_24h"],
+        "period_days": stats["period_days"],
+        "performance": performance
+    }
 
 
 @router.post("/test", response_model=dict)

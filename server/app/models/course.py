@@ -58,4 +58,6 @@ class Course(Base):
     rubrics = relationship("Rubric", back_populates="course", cascade="all, delete-orphan")
     pages = relationship("Page", back_populates="course", cascade="all, delete-orphan")
     discussion_topics = relationship("DiscussionTopic", back_populates="course", cascade="all, delete-orphan")
-    # enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")  # TODO: Create Enrollment model
+    
+    # Enrollments - записи пользователей на курс
+    enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")

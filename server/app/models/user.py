@@ -24,3 +24,10 @@ class User(Base):
     gradebook_history_changes = relationship("GradebookHistory", back_populates="changed_by_user")
     reminder_settings = relationship("ReminderSettings", back_populates="user")
     created_quizzes = relationship("Quiz", back_populates="creator")
+    
+    # Enrollments - записи на курсы
+    enrollments = relationship("Enrollment", back_populates="user", cascade="all, delete-orphan")
+    
+    # Notifications - уведомления пользователя
+    notifications = relationship("InAppNotification", back_populates="user", cascade="all, delete-orphan")
+    notification_preferences = relationship("NotificationPreferences", back_populates="user", uselist=False, cascade="all, delete-orphan")

@@ -7,3 +7,40 @@ package-lock.json
 .idea/
 vite.config.*s.*
 .env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+
+# Databases and local state
+server/*.db
+server/test.db
+server/test_*.db
+server/uploads/
+server/notifications.log
+
+# Node
+node_modules/
+pnpm-lock.yaml
+dist/
+build/
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

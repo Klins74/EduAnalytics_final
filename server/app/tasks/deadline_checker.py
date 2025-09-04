@@ -115,35 +115,39 @@ class DeadlineChecker:
             )
     
     async def _get_course_students(self, db: AsyncSession, course_id: int) -> List[dict]:
-        """Получить список студентов курса для уведомлений."""
+        """Получить список студентов курса для уведомлений через enrollments."""
         try:
-            # Получаем студентов через связь с группами
+            from app.models.enrollment import Enrollment, EnrollmentRole, EnrollmentStatus
+            
+            # Получаем активных студентов курса через enrollments
             stmt = (
-                select(User, Student)
-                .join(Student, User.id == Student.user_id)
-                .join(Course.groups)
-                .join(Student.group)
-                .where(Course.id == course_id)
-                .distinct()
+                select(User)
+                .join(Enrollment, User.id == Enrollment.user_id)
+                .where(
+                    Enrollment.course_id == course_id,
+                    Enrollment.role == EnrollmentRole.student,
+                    Enrollment.status == EnrollmentStatus.active
+                )
             )
             
             result = await db.execute(stmt)
-            user_student_pairs = result.all()
+            users = result.scalars().all()
             
             students = []
-            for user, student in user_student_pairs:
+            for user in users:
                 students.append({
                     "user_id": user.id,
-                    "student_id": student.id,
-                    "name": f"{student.first_name} {student.last_name}",
-                    "email": user.username,  # Предполагаем, что username это email
-                    "group_id": student.group_id
+                    "student_id": user.id,  # Используем user.id как student_id
+                    "name": user.username,
+                    "email": getattr(user, 'email', user.username),
+                    "enrollment_id": None  # Можно добавить при необходимости
                 })
             
+            logger.info(f"Найдено {len(students)} активных студентов для курса {course_id}")
             return students
             
         except Exception as e:
-            logger.error(f"Ошибка при получении студентов курса {course_id}: {str(e)}")
+            logger.error(f"Ошибка при получении студентов курса {course_id}: {str(e)}", exc_info=True)
             return []
     
     async def check_single_assignment(self, db: AsyncSession, assignment_id: int) -> bool:

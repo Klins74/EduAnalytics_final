@@ -3,6 +3,7 @@ import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from enum import Enum
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 
@@ -48,27 +49,89 @@ class NotificationService:
         priority: NotificationPriority = NotificationPriority.NORMAL,
         recipients: List[Dict[str, Any]] = None
     ) -> Dict[str, bool]:
-        """Отправить уведомление через указанные каналы."""
+        """Отправить уведомление через указанные каналы с логированием."""
         if channels is None:
             channels = [NotificationChannel.WEBHOOK]
         
         results = {}
+        recipients_count = len(recipients) if recipients else 0
+        
+        # Импортируем CRUD для логирования
+        from app.crud.notification_log import notification_log_crud
+        from app.db.session import AsyncSessionLocal
         
         for channel in channels:
+            log_id = None
+            start_time = datetime.now(timezone.utc)
+            
             try:
+                # Создаем запись в логе
+                async with AsyncSessionLocal() as log_db:
+                    log_entry = await notification_log_crud.create_log(
+                        db=log_db,
+                        event_type=event_type,
+                        channel=channel.value,
+                        priority=priority.value,
+                        recipients_count=recipients_count,
+                        metadata={"data_keys": list(data.keys()) if data else []}
+                    )
+                    log_id = log_entry.id
+                
+                # Отправляем уведомление
+                success = False
                 if channel == NotificationChannel.WEBHOOK:
-                    results[channel.value] = await self._send_webhook(event_type, data)
+                    success = await self._send_webhook(event_type, data)
                 elif channel == NotificationChannel.EMAIL:
-                    results[channel.value] = await self._send_email(event_type, data, recipients, priority)
+                    success = await self._send_email(event_type, data, recipients, priority)
                 elif channel == NotificationChannel.SMS:
-                    results[channel.value] = await self._send_sms(event_type, data, recipients, priority)
+                    success = await self._send_sms(event_type, data, recipients, priority)
                 elif channel == NotificationChannel.PUSH:
-                    results[channel.value] = await self._send_push(event_type, data, recipients, priority)
+                    success = await self._send_push(event_type, data, recipients, priority)
                 elif channel == NotificationChannel.IN_APP:
-                    results[channel.value] = await self._send_in_app(event_type, data, recipients, priority)
+                    success = await self._send_in_app(event_type, data, recipients, priority)
+                else:
+                    logger.warning(f"Unknown notification channel: {channel}")
+                    success = False
+                
+                results[channel.value] = success
+                
+                # Обновляем лог с результатом
+                if log_id:
+                    processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+                    async with AsyncSessionLocal() as log_db:
+                        if success:
+                            await notification_log_crud.update_log_success(
+                                db=log_db,
+                                log_id=log_id,
+                                successful_count=recipients_count,
+                                processing_time_ms=processing_time
+                            )
+                        else:
+                            await notification_log_crud.update_log_failure(
+                                db=log_db,
+                                log_id=log_id,
+                                error_message="Unknown error during sending",
+                                processing_time_ms=processing_time
+                            )
+                    
             except Exception as e:
-                logger.error(f"Error sending {channel.value} notification: {str(e)}")
+                error_msg = str(e)
+                logger.error(f"Error sending {channel.value} notification: {error_msg}")
                 results[channel.value] = False
+                
+                # Обновляем лог с ошибкой
+                if log_id:
+                    processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+                    try:
+                        async with AsyncSessionLocal() as log_db:
+                            await notification_log_crud.update_log_failure(
+                                db=log_db,
+                                log_id=log_id,
+                                error_message=error_msg,
+                                processing_time_ms=processing_time
+                            )
+                    except Exception as log_error:
+                        logger.error(f"Failed to update notification log: {log_error}")
         
         return results
     
@@ -229,13 +292,78 @@ class NotificationService:
             return False
     
     async def _send_in_app(self, event_type: str, data: dict, recipients: List[Dict[str, Any]], priority: NotificationPriority) -> bool:
-        """Отправить in-app уведомление (сохранить в БД для отображения в UI)."""
+        """Отправить in-app уведомление через сохранение в базу данных."""
         try:
-            # TODO: Реализовать сохранение в БД для in-app уведомлений
-            logger.info(f"Successfully queued {event_type} in-app notification for {len(recipients)} recipients")
-            return True
+            if not recipients:
+                logger.warning("No recipients provided for in-app notification")
+                return False
+            
+            # Импортируем здесь, чтобы избежать циклических импортов
+            from app.crud.notification import notification_crud
+            from app.schemas.notification import InAppNotificationCreate
+            from app.models.notification import NotificationType, NotificationPriority as NotifPriority
+            from app.db.session import AsyncSessionLocal
+            
+            # Маппинг приоритетов
+            priority_mapping = {
+                NotificationPriority.LOW: NotifPriority.low,
+                NotificationPriority.NORMAL: NotifPriority.normal,
+                NotificationPriority.HIGH: NotifPriority.high,
+                NotificationPriority.URGENT: NotifPriority.urgent
+            }
+            
+            # Определяем тип уведомления
+            notification_type = NotificationType.system
+            if "assignment" in event_type.lower():
+                notification_type = NotificationType.assignment
+            elif "grade" in event_type.lower():
+                notification_type = NotificationType.grade
+            elif "deadline" in event_type.lower():
+                notification_type = NotificationType.deadline
+            elif "reminder" in event_type.lower():
+                notification_type = NotificationType.reminder
+            elif "feedback" in event_type.lower():
+                notification_type = NotificationType.feedback
+            elif "schedule" in event_type.lower():
+                notification_type = NotificationType.schedule
+            
+            # Формируем заголовок и сообщение
+            title = data.get("title", f"Уведомление: {event_type}")
+            message = data.get("message", str(data))
+            
+            # Создаем уведомления для каждого получателя
+            async with AsyncSessionLocal() as db:
+                notifications_data = []
+                for recipient in recipients:
+                    user_id = recipient.get("user_id")
+                    if not user_id:
+                        continue
+                    
+                    notification_data = InAppNotificationCreate(
+                        user_id=user_id,
+                        title=title,
+                        message=message,
+                        notification_type=notification_type,
+                        priority=priority_mapping.get(priority, NotifPriority.normal),
+                        metadata=data,
+                        assignment_id=data.get("assignment_id"),
+                        course_id=data.get("course_id"),
+                        grade_id=data.get("grade_id"),
+                        schedule_id=data.get("schedule_id"),
+                        action_url=data.get("action_url")
+                    )
+                    notifications_data.append(notification_data)
+                
+                if notifications_data:
+                    await notification_crud.create_multiple(db=db, notifications=notifications_data)
+                    logger.info(f"Created {len(notifications_data)} in-app notifications for event: {event_type}")
+                    return True
+                else:
+                    logger.warning("No valid recipients for in-app notifications")
+                    return False
+            
         except Exception as e:
-            logger.error(f"Error queuing {event_type} in-app notification: {str(e)}")
+            logger.error(f"Error sending in-app notification: {str(e)}")
             return False
     
     async def send_webhook_legacy(self, webhook_type: str, data: dict) -> bool:

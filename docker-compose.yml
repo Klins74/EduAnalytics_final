@@ -13,9 +13,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
-      - DB_URL_SYNC=postgresql+psycopg2://edua:secret@db:5432/eduanalytics
-      - DATABASE_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
+      - DB_URL=${DB_URL:-postgresql+asyncpg://edua:secret@db:5432/eduanalytics}
+      - DB_URL_SYNC=${DB_URL_SYNC:-postgresql+psycopg2://edua:secret@db:5432/eduanalytics}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://edua:secret@db:5432/eduanalytics}
       - PGCLIENTENCODING=UTF8
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
@@ -29,6 +29,8 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-tinyllama}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
     depends_on:
       db:
         condition: service_healthy
@@ -79,13 +81,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_USER=edua
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=eduanalytics
+      - POSTGRES_USER=${POSTGRES_USER:-edua}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
+      - POSTGRES_DB=${POSTGRES_DB:-eduanalytics}
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U edua -d eduanalytics"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edua} -d ${POSTGRES_DB:-eduanalytics}"]
     
 
   # Сервис кэширования Redis
@@ -113,8 +115,8 @@ services:
     container_name: eduanalytics_reminder_scheduler
     command: python reminder_scheduler.py
     environment:
-      - DB_URL=postgresql+asyncpg://edua:secret@db:5432/eduanalytics
-      - REDIS_URL=redis://cache:6379
+      - DB_URL=${DB_URL:-postgresql+asyncpg://edua:secret@db:5432/eduanalytics}
+      - REDIS_URL=${REDIS_URL:-redis://cache:6379}
     depends_on:
       - db
       - cache
