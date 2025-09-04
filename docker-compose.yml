@@ -54,6 +54,7 @@ services:
 
   # Canvas LMS (официальный образ)
   canvas:
+    profiles: [extras]
     image: instructure/canvas-lms:stable
     container_name: eduanalytics_canvas
     env_file: ./.env
@@ -99,6 +100,7 @@ services:
 
   # Elasticsearch для Canvas LMS
   elasticsearch:
+    profiles: [extras]
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
     container_name: eduanalytics_elasticsearch
     environment:
