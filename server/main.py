@@ -85,10 +85,34 @@ if sentry_dsn:
     sentry_sdk.init(
         dsn=sentry_dsn,
         integrations=[FastApiIntegration()],
-        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
         profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        environment=os.getenv("SENTRY_ENVIRONMENT", app_settings.SENTRY_ENVIRONMENT),
         send_default_pii=False,
+        before_send=lambda event, hint: _sentry_scrub_event(event),
     )
+
+def _sentry_scrub_event(event):
+    try:
+        request = event.get("request")
+        if request:
+            headers = request.get("headers", {})
+            headers.pop("cookie", None)
+            headers.pop("authorization", None)
+            request["headers"] = headers
+            url = request.get("url")
+            if url and isinstance(url, str):
+                # Drop query strings
+                try:
+                    from urllib.parse import urlsplit, urlunsplit
+                    parts = list(urlsplit(url))
+                    parts[3] = ""  # query
+                    request["url"] = urlunsplit(parts)
+                except Exception:
+                    pass
+        return event
+    except Exception:
+        return event
 
 # Настройка CORS
 def is_production():
@@ -148,6 +172,28 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=cors_headers,
 )
+
+# Correlation ID middleware
+import uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        correlation_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        # bind to Sentry scope if available
+        try:
+            with sentry_sdk.configure_scope() as scope:
+                scope.set_tag("correlation_id", correlation_id)
+        except Exception:
+            pass
+        # Attach to request state
+        request.state.correlation_id = correlation_id
+        # Proceed
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = correlation_id
+        return response
+
+app.add_middleware(CorrelationIdMiddleware)
 
 # Подключение маршрутов пользователей
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
