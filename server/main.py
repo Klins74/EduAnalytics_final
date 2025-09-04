@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError
 import logging
+import contextvars
 from app.core.config import settings
 from app.services.notification import NotificationService
 from app.services.scheduler import start_deadline_scheduler
@@ -180,6 +181,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         correlation_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        token = correlation_id_var.set(correlation_id)
         # bind to Sentry scope if available
         try:
             with sentry_sdk.configure_scope() as scope:
@@ -188,8 +190,10 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             pass
         # Attach to request state
         request.state.correlation_id = correlation_id
-        # Proceed
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        finally:
+            correlation_id_var.reset(token)
         response.headers["X-Request-ID"] = correlation_id
         return response
 
@@ -245,15 +249,48 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 # Для расширения: добавьте middlewares, обработчики ошибок и т.д.
 
-# Настройка структурированного логирования
-logging.basicConfig(
-    level=settings.LOG_LEVEL if hasattr(settings, 'LOG_LEVEL') else logging.INFO,
-    format='%(asctime)s %(levelname)s %(name)s %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(getattr(settings, 'LOG_FILE_PATH', 'notifications.log'))
-    ]
-)
+# Настройка структурированного JSON-логирования с корреляционным ID
+correlation_id_var = contextvars.ContextVar("correlation_id", default=None)
+
+class CorrelationIdFilter(logging.Filter):
+    def filter(self, record):
+        record.correlation_id = correlation_id_var.get()
+        return True
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        try:
+            ts = self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z")
+        except Exception:
+            ts = None
+        payload = {
+            "timestamp": ts,
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "correlation_id": getattr(record, "correlation_id", None),
+            "pathname": getattr(record, "pathname", None),
+            "lineno": getattr(record, "lineno", None),
+        }
+        return json.dumps(payload, ensure_ascii=False)
+
+root_logger = logging.getLogger()
+root_logger.handlers.clear()
+root_logger.setLevel(getattr(settings, 'LOG_LEVEL', logging.INFO))
+
+_json_formatter = JSONFormatter()
+_cid_filter = CorrelationIdFilter()
+
+_stream_handler = logging.StreamHandler(sys.stdout)
+_stream_handler.setFormatter(_json_formatter)
+_stream_handler.addFilter(_cid_filter)
+
+_file_handler = logging.FileHandler(getattr(settings, 'LOG_FILE_PATH', 'notifications.log'))
+_file_handler.setFormatter(_json_formatter)
+_file_handler.addFilter(_cid_filter)
+
+root_logger.addHandler(_stream_handler)
+root_logger.addHandler(_file_handler)
 
 notification_service = NotificationService(settings=settings)
 
