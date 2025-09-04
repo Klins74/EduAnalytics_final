@@ -30,6 +30,9 @@ server/test_*.db
 server/uploads/
 server/notifications.log
 
+# Workspace mirrors (exclude large third-party sources)
+workspace/
+
 # Node
 node_modules/
 pnpm-lock.yaml
