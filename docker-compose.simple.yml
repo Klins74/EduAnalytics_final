@@ -1,0 +1,83 @@
+# docker-compose.simple.yml - Simplified version for testing
+
+services:
+  # Бэкенд сервис на FastAPI (без миграций)
+  api:
+    build: ./server
+    env_file: ./.env
+    container_name: eduanalytics_api_simple
+    command: python main_minimal.py
+    volumes:
+      - ./server:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=${DB_URL:-postgresql+asyncpg://edua:secret@db:5432/eduanalytics}
+      - DB_URL_SYNC=${DB_URL_SYNC:-postgresql+psycopg2://edua:secret@db:5432/eduanalytics}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://edua:secret@db:5432/eduanalytics}
+      - PGCLIENTENCODING=UTF8
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-tinyllama}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    depends_on:
+      - db
+      - cache
+
+  # Фронтенд сервис на Vite
+  ui:
+    build: .
+    container_name: eduanalytics_ui_simple
+    env_file: ./.env
+    working_dir: /app
+    command: "npm start -- --port 5173 --host 0.0.0.0"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  # Сервис базы данных PostgreSQL
+  db:
+    image: postgres:13-alpine
+    container_name: eduanalytics_db_simple
+    volumes:
+      - postgres_data_simple:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-edua}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
+      - POSTGRES_DB=${POSTGRES_DB:-eduanalytics}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edua} -d ${POSTGRES_DB:-eduanalytics}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Сервис кэширования Redis
+  cache:
+    image: redis:6-alpine
+    container_name: eduanalytics_cache_simple
+    ports:
+      - "6379:6379"
+
+  # Локальный сервер моделей Ollama (бесплатно, оффлайн)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: eduanalytics_ollama_simple
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_simple:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  postgres_data_simple:
+  ollama_simple:

@@ -20,6 +20,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.canvas_sync import CanvasSyncState
 from app.crud.canvas_sync import CanvasSyncCRUD
 from app.core.config import settings
+from app.services.migration_manager import MigrationRisk
 
 logger = logging.getLogger(__name__)
 
@@ -604,20 +605,17 @@ class DataMartETLService:
                 else:
                     marts_to_process = list(DataMartType)
                 
-                # Process each mart
+                # Process each mart; on error, propagate to fail the job
                 for mart in marts_to_process:
-                    try:
-                        mart_result = await self._process_data_mart(db, mart)
-                        results["marts_processed"].append(mart_result)
-                        results["records_processed"] += mart_result.get("records_processed", 0)
-                        
-                    except Exception as e:
-                        error_info = {
-                            "mart": mart.value,
-                            "error": str(e)
-                        }
-                        results["errors"].append(error_info)
-                        logger.error(f"Error processing mart {mart.value}: {e}")
+                    mart_result = await self._process_data_mart(db, mart)
+                    # If a mart returns failed status, raise to fail the pipeline
+                    if mart_result.get("status") == "failed":
+                        error_message = mart_result.get("error", f"Mart {mart.value} failed")
+                        logger.error(f"Error processing mart {mart.value}: {error_message}")
+                        raise Exception(error_message)
+
+                    results["marts_processed"].append(mart_result)
+                    results["records_processed"] += mart_result.get("records_processed", 0)
                 
                 # Calculate duration
                 end_time = datetime.utcnow()

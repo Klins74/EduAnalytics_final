@@ -1,17 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, get_current_user
+from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, get_current_user, SECRET_KEY
 from app.db.session import get_async_session
 from app.services.rate_limiter import limit
 from app.models.user import User
 from app.schemas.token import Token
 from jose import JWTError, jwt
-import os
 
 router = APIRouter()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
 
 @router.post("/token", response_model=Token, dependencies=[Depends(limit("auth:token", limit=10, window_seconds=60))])

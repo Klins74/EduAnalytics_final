@@ -1,4 +1,5 @@
 from typing import Dict, Any
+import os
 import time
 import logging
 from datetime import datetime, timedelta
@@ -142,13 +143,18 @@ async def readiness_check(db: AsyncSession = Depends(get_async_session)):
     # 4. Environment configuration check
     required_vars = [
         "DATABASE_URL",
-        "SECRET_KEY",
+        "JWT_SECRET",
         "REDIS_URL"
     ]
     
     missing_vars = []
     for var in required_vars:
-        if not hasattr(settings, var.lower()) or not getattr(settings, var.lower()):
+        # Prefer env var, then uppercase Settings attribute, then lowercase fallback
+        if var == "JWT_SECRET":
+            present = bool(os.getenv("JWT_SECRET") or getattr(settings, "JWT_SECRET", None) or getattr(settings, "jwt_secret", None) or os.getenv("SECRET_KEY"))
+        else:
+            present = bool(os.getenv(var) or getattr(settings, var, None) or getattr(settings, var.lower(), None))
+        if not present:
             missing_vars.append(var)
     
     config_status = "healthy" if not missing_vars else "unhealthy"

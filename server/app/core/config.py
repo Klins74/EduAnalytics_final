@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import Field
@@ -110,6 +111,9 @@ class Settings(BaseSettings):
     AWS_REGION: str = Field(default="us-east-1")
     AWS_ACCESS_KEY_ID: Optional[str] = Field(default=None)
     AWS_SECRET_ACCESS_KEY: Optional[str] = Field(default=None)
+    
+    # File storage / uploads
+    UPLOAD_DIRECTORY: str = Field(default="/app/uploads")
     
     model_config = ConfigDict(extra="allow", env_file=".env", env_file_encoding="utf-8")
 

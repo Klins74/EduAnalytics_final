@@ -67,8 +67,8 @@ class NotificationPreferencesBase(BaseModel):
     push_enabled: bool = Field(default=True, description="Push уведомления")
     in_app_enabled: bool = Field(default=True, description="In-app уведомления")
     
-    quiet_hours_start: Optional[str] = Field(None, description="Начало тихих часов (HH:MM)", regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
-    quiet_hours_end: Optional[str] = Field(None, description="Конец тихих часов (HH:MM)", regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    quiet_hours_start: Optional[str] = Field(None, description="Начало тихих часов (HH:MM)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    quiet_hours_end: Optional[str] = Field(None, description="Конец тихих часов (HH:MM)", pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
 
 
 class NotificationPreferencesCreate(NotificationPreferencesBase):
@@ -91,8 +91,8 @@ class NotificationPreferencesUpdate(BaseModel):
     push_enabled: Optional[bool] = None
     in_app_enabled: Optional[bool] = None
     
-    quiet_hours_start: Optional[str] = Field(None, regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
-    quiet_hours_end: Optional[str] = Field(None, regex=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    quiet_hours_start: Optional[str] = Field(None, pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    quiet_hours_end: Optional[str] = Field(None, pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
 
 
 class NotificationPreferencesResponse(NotificationPreferencesBase):
@@ -155,3 +155,28 @@ class NotificationCreateRequest(BaseModel):
     course_id: Optional[int] = None
     grade_id: Optional[int] = None
     schedule_id: Optional[int] = None
+
+
+# Алиасы для обратной совместимости
+NotificationCreate = NotificationCreateRequest
+NotificationResponse = InAppNotificationResponse
+NotificationPreferences = NotificationPreferencesResponse
+
+
+class NotificationTemplate(BaseModel):
+    """Схема для шаблонов уведомлений"""
+    name: str = Field(..., description="Название шаблона")
+    title: str = Field(..., description="Заголовок шаблона")
+    content: str = Field(..., description="Содержимое шаблона")
+    notification_type: NotificationType = Field(default=NotificationType.system)
+    variables: Optional[List[str]] = Field(None, description="Список переменных в шаблоне")
+
+
+class NotificationStats(BaseModel):
+    """Схема для статистики уведомлений"""
+    total_notifications: int = Field(..., description="Общее количество уведомлений")
+    unread_notifications: int = Field(..., description="Количество непрочитанных")
+    read_notifications: int = Field(..., description="Количество прочитанных")
+    archived_notifications: int = Field(..., description="Количество архивированных")
+    notifications_by_type: Dict[str, int] = Field(..., description="Уведомления по типам")
+    notifications_by_priority: Dict[str, int] = Field(..., description="Уведомления по приоритету")
