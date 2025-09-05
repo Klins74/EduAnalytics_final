@@ -1029,6 +1029,7 @@ async def predict_performance(
     target_id: int,
     horizon_days: int = Query(14, ge=7, le=60),
     bucket: Literal["day", "week"] = Query("day"),
+    method: Literal["combo", "ma", "ewma", "holt"] = Query("combo"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -1037,7 +1038,7 @@ async def predict_performance(
 
     days_history = 60 if bucket == "day" else 180
     try:
-        cache_key = f"analytics:{scope}:{target_id}:predict:{bucket}:{horizon_days}:v1"
+        cache_key = f"analytics:{scope}:{target_id}:predict:{bucket}:{horizon_days}:{method}:v1"
         if cached := await analytics_cache.get_json(cache_key):
             return cached
         if scope == "course":
@@ -1072,7 +1073,8 @@ async def predict_performance(
         # Use advanced forecasting from risk_analytics_service
         forecast_avg_objs = risk_analytics_service.forecast_average_grade(
             series,
-            horizon=horizon_points
+            horizon=horizon_points,
+            method=method
         )
         forecast_average_grade = [pt.get("pred_avg_grade", 0.0) for pt in forecast_avg_objs]
 

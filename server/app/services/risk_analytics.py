@@ -61,28 +61,60 @@ class RiskAnalyticsService:
             RiskFactor.INCONSISTENT_PERFORMANCE: 0.05
         }
 
-    def forecast_average_grade(self, series: List[Dict[str, Any]], horizon: int = 8) -> List[Dict[str, float]]:
-        """Простой комбинированный прогноз: экспоненциальное сглаживание + линейный тренд.
-        Fallback на последнюю известную точку. Возвращает список точек прогноза.
+    def forecast_average_grade(self, series: List[Dict[str, Any]], horizon: int = 8, method: str = "combo") -> List[Dict[str, float]]:
+        """Прогноз среднего балла.
+        methods:
+        - ma: скользящая средняя по последним N точкам
+        - ewma: экспоненциальное сглаживание (alpha)
+        - holt: двухпараметрическое (уровень+тренд) упрощенное сглаживание
+        - combo: ewma + линейный тренд (по умолчанию)
         """
         # Извлекаем числовой ряд
         values = [float(pt.get('average_grade', 0) or 0) for pt in series if pt.get('average_grade') is not None]
         if not values:
             return [{"pred_avg_grade": 0.0} for _ in range(max(1, horizon))]
 
-        # 1) Однопараметрическое экспон. сглаживание
+        def clamp(v: float) -> float:
+            return max(0.0, min(100.0, v))
+
+        if method == "ma":
+            window = min(5, len(values)) or 1
+            avg = sum(values[-window:]) / window
+            return [{"pred_avg_grade": round(clamp(avg), 2)} for _ in range(horizon)]
+
+        if method == "ewma":
+            alpha = 0.3
+            s = values[0]
+            for v in values[1:]:
+                s = alpha * v + (1 - alpha) * s
+            return [{"pred_avg_grade": round(clamp(s), 2)} for _ in range(horizon)]
+
+        if method == "holt":
+            # Простая версия Holt (level + trend)
+            alpha = 0.4
+            beta = 0.2
+            level = values[0]
+            trend = values[1] - values[0] if len(values) >= 2 else 0.0
+            for v in values[1:]:
+                prev_level = level
+                level = alpha * v + (1 - alpha) * (level + trend)
+                trend = beta * (level - prev_level) + (1 - beta) * trend
+            return [
+                {"pred_avg_grade": round(clamp(level + i * trend), 2)}
+                for i in range(1, horizon + 1)
+            ]
+
+        # combo (default): EWMA + линейный тренд по последним точкам
         alpha = 0.3
         s = values[0]
         for v in values[1:]:
             s = alpha * v + (1 - alpha) * s
 
-        # 2) Линейный тренд по последним точкам
         trend = 0.0
         if len(values) >= 2:
             n = min(8, len(values))
             recent = values[-n:]
             x = list(range(n))
-            # Оценим наклон по формуле ковариации/дисперсии
             mean_x = sum(x) / n
             mean_y = sum(recent) / n
             cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, recent))
@@ -92,14 +124,10 @@ class RiskAnalyticsService:
 
         last = values[-1]
         base = (s + last) / 2
-
-        forecast = []
-        for i in range(1, horizon + 1):
-            pred = base + trend * i
-            # Ограничим в диапазоне 0..100
-            pred = max(0.0, min(100.0, pred))
-            forecast.append({"pred_avg_grade": round(pred, 2)})
-        return forecast
+        return [
+            {"pred_avg_grade": round(clamp(base + i * trend), 2)}
+            for i in range(1, horizon + 1)
+        ]
     
     def calculate_student_risk_score(
         self,
