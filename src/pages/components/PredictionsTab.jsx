@@ -48,7 +48,7 @@ const PredictionsTab = ({ period, analysisType }) => {
     { name: 'Морозов И.', currentGrade: 4.0, predictedGrade: 3.6, riskLevel: 'medium', probability: 71 }
   ];
 
-  const engagementForecast = forecast.map((f, idx) => ({ week: `T+${idx + 1}`, predicted: f.pred_avg_grade }));
+  const engagementForecast = forecast.map((f, idx) => ({ week: `T+${idx + 1}`, predicted: Number(f.pred_avg_grade ?? f.predicted ?? 0) }));
 
   const interventionRecommendations = [
     {
@@ -250,6 +250,24 @@ const PredictionsTab = ({ period, analysisType }) => {
               </p>
             </div>
           </div>
+
+          {/* Forecast chart */}
+          {forecast && forecast.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-heading font-medium text-text-primary mb-3">Короткосрочный прогноз</h4>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={forecast.map((f, i) => ({ step: `T+${i + 1}`, predicted: Number(f.pred_avg_grade ?? f.predicted ?? 0) }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="step" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [value, 'Прогноз, балл']} />
+                    <Line type="monotone" dataKey="predicted" stroke="#7C3AED" strokeWidth={3} dot={{ r: 3 }} name="Прогноз, балл" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
