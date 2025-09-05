@@ -208,6 +208,14 @@ CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 1. `PGCLIENTENCODING=UTF8` установлена
 2. Файл .env сохранен в кодировке UTF-8 без BOM
 3. В PowerShell выполните: `chcp 65001`
+4. Установите глобально переменные окружения (перезапустите терминал после):
+   - `setx PGCLIENTENCODING UTF8`
+   - `setx PYTHONIOENCODING utf-8`
+   - `setx PYTHONUTF8 1`
+5. В PowerShell текущей сессии установите UTF-8 вывод:
+   - `$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8`
+6. Проверьте логи prestart-скрипта: он печатает `server_encoding` и `client_encoding`.
+7. Если автогенерация Alembic падает на Windows, выполните миграции из WSL/Git Bash или используйте уже добавленные ручные файлы миграций.
 
 ### Проблемы с подключением к базе данных
 
