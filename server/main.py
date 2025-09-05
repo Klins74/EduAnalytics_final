@@ -20,6 +20,7 @@ import logging
 import contextvars
 from app.core.config import settings
 from app.services.notification import NotificationService
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.scheduler import start_deadline_scheduler
 import sys
 import json
@@ -198,6 +199,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Подключение маршрутов пользователей
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
