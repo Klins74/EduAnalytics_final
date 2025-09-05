@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, get_current_user
 from app.db.session import get_async_session
+from app.services.rate_limiter import limit
 from app.models.user import User
 from app.schemas.token import Token
 from jose import JWTError, jwt
@@ -13,7 +14,7 @@ router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=Token, dependencies=[Depends(limit("auth:token", limit=10, window_seconds=60))])
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_session)):
     from sqlalchemy.future import select
     result = await db.execute(select(User).where(User.username == form_data.username))
@@ -28,7 +29,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     refresh_token = create_refresh_token({"sub": user.username, "role": user.role})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=Token, dependencies=[Depends(limit("auth:refresh", limit=20, window_seconds=300))])
 async def refresh_token(refresh_token: str = Body(...), db: AsyncSession = Depends(get_async_session)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
