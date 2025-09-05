@@ -149,30 +149,33 @@ class NotificationService:
         if isinstance(data, dict):
             data["event_type"] = event_type or data.get("event_type", "unknown")
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    self.n8n_webhook_url,
-                    json=data,
-                    headers={"Content-Type": "application/json"}
-                )
-
-                if response.status_code == 200:
-                    logger.info(f"Successfully sent {event_type} notification to n8n")
-                    return True
-                else:
-                    logger.error(
-                        f"Failed to send {event_type} notification to n8n. "
-                        f"Status: {response.status_code}, Response: {response.text}"
+        # Retry with exponential backoff
+        attempts = 0
+        max_attempts = 4
+        backoff = 0.5
+        while attempts < max_attempts:
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        self.n8n_webhook_url,
+                        json=data,
+                        headers={"Content-Type": "application/json"}
                     )
-                    return False
-
-        except httpx.TimeoutException:
-            logger.error(f"Timeout sending {event_type} notification to n8n")
-            return False
-        except Exception as e:
-            logger.error(f"Error sending {event_type} notification to n8n: {str(e)}")
-            return False
+                    if response.status_code == 200:
+                        logger.info(f"Successfully sent {event_type} notification to n8n")
+                        return True
+                    else:
+                        logger.error(f"Failed to send {event_type} notification to n8n. Status: {response.status_code}")
+            except httpx.TimeoutException:
+                logger.error(f"Timeout sending {event_type} notification to n8n (attempt {attempts+1})")
+            except Exception as e:
+                logger.error(f"Error sending {event_type} notification to n8n (attempt {attempts+1}): {str(e)}")
+            attempts += 1
+            if attempts < max_attempts:
+                import asyncio
+                await asyncio.sleep(backoff)
+                backoff *= 2
+        return False
 
     async def send_webhook(self, data: dict) -> bool:
         """Обратная совместимость: публичный метод, ожидаемый тестами.
@@ -198,24 +201,30 @@ class NotificationService:
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    self.email_service_url,
-                    json=email_data,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    logger.info(f"Successfully sent {event_type} email notification")
-                    return True
-                else:
-                    logger.error(f"Failed to send {event_type} email notification. Status: {response.status_code}")
-                    return False
-                    
-        except Exception as e:
-            logger.error(f"Error sending {event_type} email notification: {str(e)}")
-            return False
+        attempts = 0
+        max_attempts = 3
+        backoff = 0.5
+        while attempts < max_attempts:
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        self.email_service_url,
+                        json=email_data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    if response.status_code == 200:
+                        logger.info(f"Successfully sent {event_type} email notification")
+                        return True
+                    else:
+                        logger.error(f"Failed to send {event_type} email notification. Status: {response.status_code}")
+            except Exception as e:
+                logger.error(f"Error sending {event_type} email notification (attempt {attempts+1}): {str(e)}")
+            attempts += 1
+            if attempts < max_attempts:
+                import asyncio
+                await asyncio.sleep(backoff)
+                backoff *= 2
+        return False
     
     async def _send_sms(self, event_type: str, data: dict, recipients: List[Dict[str, Any]], priority: NotificationPriority) -> bool:
         """Отправить SMS уведомление."""
@@ -235,24 +244,30 @@ class NotificationService:
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    self.sms_service_url,
-                    json=sms_data,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    logger.info(f"Successfully sent {event_type} SMS notification")
-                    return True
-                else:
-                    logger.error(f"Failed to send {event_type} SMS notification. Status: {response.status_code}")
-                    return False
-                    
-        except Exception as e:
-            logger.error(f"Error sending {event_type} SMS notification: {str(e)}")
-            return False
+        attempts = 0
+        max_attempts = 3
+        backoff = 0.5
+        while attempts < max_attempts:
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        self.sms_service_url,
+                        json=sms_data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    if response.status_code == 200:
+                        logger.info(f"Successfully sent {event_type} SMS notification")
+                        return True
+                    else:
+                        logger.error(f"Failed to send {event_type} SMS notification. Status: {response.status_code}")
+            except Exception as e:
+                logger.error(f"Error sending {event_type} SMS notification (attempt {attempts+1}): {str(e)}")
+            attempts += 1
+            if attempts < max_attempts:
+                import asyncio
+                await asyncio.sleep(backoff)
+                backoff *= 2
+        return False
     
     async def _send_push(self, event_type: str, data: dict, recipients: List[Dict[str, Any]], priority: NotificationPriority) -> bool:
         """Отправить push уведомление."""
@@ -272,24 +287,30 @@ class NotificationService:
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    self.push_service_url,
-                    json=push_data,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    logger.info(f"Successfully sent {event_type} push notification")
-                    return True
-                else:
-                    logger.error(f"Failed to send {event_type} push notification. Status: {response.status_code}")
-                    return False
-                    
-        except Exception as e:
-            logger.error(f"Error sending {event_type} push notification: {str(e)}")
-            return False
+        attempts = 0
+        max_attempts = 3
+        backoff = 0.5
+        while attempts < max_attempts:
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        self.push_service_url,
+                        json=push_data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    if response.status_code == 200:
+                        logger.info(f"Successfully sent {event_type} push notification")
+                        return True
+                    else:
+                        logger.error(f"Failed to send {event_type} push notification. Status: {response.status_code}")
+            except Exception as e:
+                logger.error(f"Error sending {event_type} push notification (attempt {attempts+1}): {str(e)}")
+            attempts += 1
+            if attempts < max_attempts:
+                import asyncio
+                await asyncio.sleep(backoff)
+                backoff *= 2
+        return False
     
     async def _send_in_app(self, event_type: str, data: dict, recipients: List[Dict[str, Any]], priority: NotificationPriority) -> bool:
         """Отправить in-app уведомление через сохранение в базу данных."""
@@ -345,7 +366,7 @@ class NotificationService:
                         message=message,
                         notification_type=notification_type,
                         priority=priority_mapping.get(priority, NotifPriority.normal),
-                        metadata=data,
+                        extra_data=data,
                         assignment_id=data.get("assignment_id"),
                         course_id=data.get("course_id"),
                         grade_id=data.get("grade_id"),
