@@ -1,0 +1,116 @@
+version: "3.8"
+
+services:
+  metabase:
+    image: metabase/metabase:v0.47.7
+    container_name: eduanalytics_metabase
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      # Database connection for Metabase metadata
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ${MB_DB_NAME:-metabase}
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${MB_DB_USER:-metabase}
+      MB_DB_PASS: ${MB_DB_PASSWORD:-metabase_password}
+      MB_DB_HOST: db
+      
+      # Admin setup
+      MB_ADMIN_EMAIL: ${MB_ADMIN_EMAIL:-admin@eduanalytics.local}
+      MB_ADMIN_FIRST_NAME: ${MB_ADMIN_FIRST_NAME:-Admin}
+      MB_ADMIN_LAST_NAME: ${MB_ADMIN_LAST_NAME:-User}
+      MB_ADMIN_PASSWORD: ${MB_ADMIN_PASSWORD:-admin_password}
+      
+      # Site settings
+      MB_SITE_NAME: "EduAnalytics BI"
+      MB_SITE_URL: ${MB_SITE_URL:-http://localhost:3001}
+      
+      # Performance tuning
+      JAVA_OPTS: "-Xmx2g -XX:+UseG1GC"
+      
+      # Disable telemetry
+      MB_DISABLE_SESSION_COOKIES: true
+      MB_ASYNC_QUERY_THREAD_POOL_SIZE: 4
+      
+    volumes:
+      # Persist Metabase app data (dashboards, questions, etc.)
+      - metabase_data:/metabase-data
+      
+      # Mount init scripts for database setup
+      - ./metabase/init:/docker-entrypoint-initdb.d:ro
+      
+    depends_on:
+      - db
+    networks:
+      - eduanalytics_network
+    profiles:
+      - bi
+      - full
+
+  # Optional: Superset as alternative BI tool
+  superset:
+    image: apache/superset:3.0.1
+    container_name: eduanalytics_superset
+    restart: always
+    ports:
+      - "8088:8088"
+    environment:
+      # Database connection
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      DATABASE_DB: ${SUPERSET_DB_NAME:-superset}
+      DATABASE_HOST: db
+      DATABASE_PASSWORD: ${SUPERSET_DB_PASSWORD:-superset_password}
+      DATABASE_USER: ${SUPERSET_DB_USER:-superset}
+      DATABASE_PORT: 5432
+      DATABASE_DIALECT: postgresql
+      
+      # Redis for caching
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      
+      # Admin user
+      SUPERSET_ADMIN_USER: ${SUPERSET_ADMIN_USER:-admin}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin_password}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@eduanalytics.local}
+      SUPERSET_ADMIN_FIRSTNAME: ${SUPERSET_ADMIN_FIRSTNAME:-Admin}
+      SUPERSET_ADMIN_LASTNAME: ${SUPERSET_ADMIN_LASTNAME:-User}
+      
+    volumes:
+      # Configuration
+      - ./superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./superset/init:/app/docker-init.d:ro
+      
+      # Persist data
+      - superset_data:/app/superset_home
+      
+    depends_on:
+      - db
+      - cache
+    networks:
+      - eduanalytics_network
+    profiles:
+      - bi
+      - full
+    command: >
+      sh -c "
+        superset db upgrade &&
+        superset fab create-admin \
+          --username $${SUPERSET_ADMIN_USER} \
+          --firstname $${SUPERSET_ADMIN_FIRSTNAME} \
+          --lastname $${SUPERSET_ADMIN_LASTNAME} \
+          --email $${SUPERSET_ADMIN_EMAIL} \
+          --password $${SUPERSET_ADMIN_PASSWORD} &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
+
+volumes:
+  metabase_data:
+    driver: local
+  superset_data:
+    driver: local
+
+networks:
+  eduanalytics_network:
+    external: true

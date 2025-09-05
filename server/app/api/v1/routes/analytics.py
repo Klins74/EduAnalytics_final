@@ -1,13 +1,14 @@
 from typing import Optional, List, Dict, Literal
 import logging
 import statistics
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, and_, select
 from datetime import datetime, timezone, timedelta
 
 from app.db.session import get_async_session
 from app.core.security import get_current_user, require_role
+from app.services.rate_limiter import rate_limiter
 from app.models.user import User, UserRole
 from app.models.course import Course
 from app.models.assignment import Assignment
@@ -1025,6 +1026,7 @@ def _simple_forecast(values: List[float], horizon: int) -> List[float]:
     description="Простой прогноз по числу сдач и средним оценкам для студента или курса"
 )
 async def predict_performance(
+    request: Request,
     scope: Literal["student", "course"],
     target_id: int,
     horizon_days: int = Query(14, ge=7, le=60),
@@ -1033,6 +1035,9 @@ async def predict_performance(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
+    # Rate limiting for analytics endpoints
+    await rate_limiter.allow_request(f"analytics_predict:{request.client.host}", limit=20, period=60)
+    
     if current_user.role not in [UserRole.teacher, UserRole.admin]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
 

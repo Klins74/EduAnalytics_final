@@ -58,7 +58,17 @@ class Settings(BaseSettings):
     CANVAS_LMS_DOMAIN: str = Field(default="localhost")
     CANVAS_LMS_REDIS_URL: str = Field(default="redis://cache:6379/0")
     CANVAS_LMS_ELASTICSEARCH_URL: str = Field(default="http://elasticsearch:9200")
+    # Canvas OAuth / API client
+    CANVAS_BASE_URL: str = Field(default="")
+    CANVAS_CLIENT_ID: str = Field(default="")
+    CANVAS_CLIENT_SECRET: str = Field(default="")
+    CANVAS_REDIRECT_URI: str = Field(default="")
+    CANVAS_RATE_LIMIT: int = Field(default=300)
     REDIS_URL: str = Field(default="redis://cache:6379/0")
+    CANVAS_LIVE_EVENTS_SECRET: str = Field(default="")
+    CANVAS_EVENTS_STREAM: str = Field(default="canvas:events")
+    CANVAS_EVENTS_DLQ: str = Field(default="canvas:events:dlq")
+    CANVAS_EVENTS_STREAM_MAXLEN: int = Field(default=10000)
     AI_PROVIDER: str = Field(default="gemini")  # gemini|openrouter|openai|anthropic|ollama
     AI_MODEL: str = Field(default="")
     AI_API_KEY: str = Field(default="")
@@ -75,6 +85,32 @@ class Settings(BaseSettings):
     DEADLINE_CHECK_ENABLED: bool = Field(default=False)
     DEADLINE_CHECK_INTERVAL: int = Field(default=3600)
     DEADLINE_NOTIFICATION_DAYS: str = Field(default="[7,3,1]")
+    # Canvas REST sync runner
+    CANVAS_REST_SYNC_ENABLED: bool = Field(default=False)
+    CANVAS_REST_SYNC_INTERVAL: int = Field(default=3600)
+    CANVAS_SYNC_USER_ID: int = Field(default=0)
+    CANVAS_SYNC_SINCE_DAYS: int = Field(default=7)
+    CANVAS_DAP_INGEST_ENABLED: bool = Field(default=False)
+    
+    # Telegram Bot Configuration
+    TELEGRAM_BOT_TOKEN: Optional[str] = Field(default=None)
+    TELEGRAM_TIMEOUT: int = Field(default=30)
+    
+    # SMS Configuration
+    SMS_PROVIDER: str = Field(default="twilio")  # twilio, aws
+    SMS_MAX_LENGTH: int = Field(default=160)
+    SMS_TIMEOUT: int = Field(default=30)
+    
+    # Twilio Configuration
+    TWILIO_ACCOUNT_SID: Optional[str] = Field(default=None)
+    TWILIO_AUTH_TOKEN: Optional[str] = Field(default=None)
+    TWILIO_FROM_NUMBER: Optional[str] = Field(default=None)
+    
+    # AWS SMS Configuration
+    AWS_REGION: str = Field(default="us-east-1")
+    AWS_ACCESS_KEY_ID: Optional[str] = Field(default=None)
+    AWS_SECRET_ACCESS_KEY: Optional[str] = Field(default=None)
+    
     model_config = ConfigDict(extra="allow", env_file=".env", env_file_encoding="utf-8")
 
     def get_db_url(self, for_migration: bool = False) -> str:

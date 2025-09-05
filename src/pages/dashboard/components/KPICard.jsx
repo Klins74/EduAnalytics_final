@@ -1,7 +1,20 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
+import DataSourceBadge from '../../../components/ui/DataSourceBadge';
 
-const KPICard = ({ data, title, value, change, changeType, icon, color, description }) => {
+const KPICard = ({ 
+  data, 
+  title, 
+  value, 
+  change, 
+  changeType, 
+  icon, 
+  color, 
+  description,
+  dataSource = 'local',
+  lastUpdated = null,
+  isConnected = true 
+}) => {
   // Support both data object and individual props
   const cardData = data || { title, value, change, changeType, icon, color, description };
   const {
@@ -35,12 +48,19 @@ const KPICard = ({ data, title, value, change, changeType, icon, color, descript
         <div className={`w-12 h-12 bg-gradient-to-br ${getColorClasses(cardColor)} rounded-lg flex items-center justify-center`}>
           <Icon name={cardIcon} size={24} color="white" />
         </div>
-        <div className={`flex items-center space-x-1 ${getChangeColor(cardChangeType)}`}>
-          <Icon 
-            name={cardChangeType === 'positive' ? 'TrendingUp' : 'TrendingDown'} 
-            size={16} 
+        <div className="flex flex-col items-end gap-2">
+          <DataSourceBadge 
+            source={dataSource}
+            lastUpdated={lastUpdated}
+            isConnected={isConnected}
           />
-          <span className="text-sm font-medium">{cardChange}</span>
+          <div className={`flex items-center space-x-1 ${getChangeColor(cardChangeType)}`}>
+            <Icon 
+              name={cardChangeType === 'positive' ? 'TrendingUp' : 'TrendingDown'} 
+              size={16} 
+            />
+            <span className="text-sm font-medium">{cardChange}</span>
+          </div>
         </div>
       </div>
       

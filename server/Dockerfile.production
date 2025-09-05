@@ -1,0 +1,113 @@
+# Production Dockerfile for EduAnalytics
+FROM python:3.11-slim as base
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN groupadd -r app && useradd -r -g app app
+
+# Set work directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt requirements-ml.txt requirements-otel.txt requirements-scheduler.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-ml.txt && \
+    pip install --no-cache-dir -r requirements-otel.txt && \
+    pip install --no-cache-dir -r requirements-scheduler.txt
+
+# Production stage
+FROM base as production
+
+# Copy application code
+COPY --chown=app:app . /app/
+
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/logs /app/static && \
+    chown -R app:app /app/uploads /app/logs /app/static
+
+# Install additional production dependencies
+RUN pip install --no-cache-dir gunicorn uvicorn[standard]
+
+# Copy production configuration
+COPY --chown=app:app config/production.py /app/config/
+COPY --chown=app:app scripts/entrypoint.prod.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Switch to app user
+USER app
+
+# Expose port
+EXPOSE 8000
+
+# Default command
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--access-logfile", "-", "--error-logfile", "-", "main:app"]
+
+# Development stage
+FROM base as development
+
+# Install development dependencies
+RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov black isort flake8 mypy
+
+# Copy application code
+COPY --chown=app:app . /app/
+
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R app:app /app/uploads /app/logs
+
+# Copy development configuration
+COPY --chown=app:app config/development.py /app/config/
+COPY --chown=app:app scripts/entrypoint.dev.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Switch to app user
+USER app
+
+# Expose ports (app + debugger)
+EXPOSE 8000 5678
+
+# Default command for development
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Testing stage
+FROM development as testing
+
+# Copy test configuration
+COPY --chown=app:app config/testing.py /app/config/
+
+# Run tests by default
+CMD ["pytest", "-v", "--cov=app", "--cov-report=html", "--cov-report=term"]
+
+# CI stage
+FROM testing as ci
+
+# Install CI-specific tools
+RUN pip install --no-cache-dir coverage pytest-html pytest-json-report
+
+# Copy CI scripts
+COPY --chown=app:app scripts/ci/ /app/ci/
+RUN chmod +x /app/ci/*.sh
+
+# Default CI command
+CMD ["/app/ci/run-tests.sh"]

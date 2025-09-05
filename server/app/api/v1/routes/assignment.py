@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session
 from app.core.security import get_current_user
-from app.core.security import require_role
+from app.core.security import require_role as _require_role
+from app.core.security import require_roles, audit_event
 from app.models.user import User, UserRole
 from app.schemas.assignment import AssignmentCreate, AssignmentRead, AssignmentUpdate, AssignmentList
 from app.crud import assignment as crud_assignment
@@ -83,7 +84,7 @@ async def get_assignment(
 async def create_assignment(
     assignment: AssignmentCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin))
 ):
     """Создать новое задание.
     

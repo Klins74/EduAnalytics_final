@@ -14,6 +14,9 @@ from app.models.enrollment import Enrollment, EnrollmentRole, EnrollmentStatus
 from app.db.session import AsyncSessionLocal
 import asyncio
 import json
+from app.services.live_events_worker import live_events_worker
+from app.services.canvas_sync import canvas_sync_service
+from app.services.canvas_dap import canvas_dap_ingest
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +161,33 @@ def start_deadline_scheduler(notification_service, interval: int = None) -> None
             # Ждем до следующей проверки
             await asyncio.sleep(interval_seconds)
 
+    async def _canvas_rest_sync_runner():
+        if not getattr(settings, 'CANVAS_REST_SYNC_ENABLED', False):
+            return
+        logger.info("Canvas REST sync runner started")
+        sync_interval = getattr(settings, 'CANVAS_REST_SYNC_INTERVAL', 3600)
+        user_id = getattr(settings, 'CANVAS_SYNC_USER_ID', 0)
+        if not user_id:
+            logger.warning("CANVAS_SYNC_USER_ID not set; skipping Canvas sync")
+            return
+        while True:
+            try:
+                await canvas_sync_service.sync_courses(user_id)
+            except Exception as e:
+                logger.error(f"Canvas REST sync error: {e}")
+            await asyncio.sleep(sync_interval)
+
+    async def _canvas_dap_runner():
+        if not getattr(settings, 'CANVAS_DAP_INGEST_ENABLED', False):
+            return
+        logger.info("Canvas DAP ingest runner started")
+        while True:
+            try:
+                await canvas_dap_ingest.ingest_once()
+            except Exception as e:
+                logger.error(f"Canvas DAP ingest error: {e}")
+            await asyncio.sleep(24 * 3600)
+
     try:
         # Получаем текущий event loop
         loop = asyncio.get_running_loop()
@@ -165,6 +195,12 @@ def start_deadline_scheduler(notification_service, interval: int = None) -> None
         # Создаем задачу в текущем loop
         task = loop.create_task(_deadline_runner())
         logger.info(f"Deadline scheduler task created: {task}")
+        # запустим воркер Live Events как фоновую задачу
+        loop.create_task(live_events_worker.run())
+        # и Canvas REST sync (если включен)
+        loop.create_task(_canvas_rest_sync_runner())
+        # и DAP ingestion (если включен)
+        loop.create_task(_canvas_dap_runner())
         
     except RuntimeError as e:
         # Если нет активного event loop, логируем предупреждение

@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import logging
@@ -18,6 +18,7 @@ from app.schemas.webhook import (
 from app.services.notification import NotificationService
 from app.core.security import get_current_user
 from app.models.user import User
+from app.services.live_events import live_events_ingest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -249,3 +250,11 @@ async def _process_schedule_notification(
 async def webhook_health():
     """Проверка состояния webhook сервиса."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+
+@router.post("/canvas")
+async def receive_canvas_event(request: Request):
+    body = await request.body()
+    headers = {k.lower(): v for k, v in request.headers.items()}
+    ok = await live_events_ingest.ingest(body, headers)
+    return JSONResponse(status_code=200 if ok else 401, content={"status": "ok" if ok else "unauthorized"})

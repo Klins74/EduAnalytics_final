@@ -1,2 +1,2 @@
-DB_URL: 'postgresql+psycopg2://edua:secret@localhost:5432/eduanalytics'
-config.get_main_option('sqlalchemy.url'): 'postgresql+psycopg2://edua:secret@localhost:5432/eduanalytics'
+DB_URL: 'postgresql+psycopg2://edua:secret@db:5432/eduanalytics'
+config.get_main_option('sqlalchemy.url'): 'postgresql+psycopg2://edua:secret@db:5432/eduanalytics'

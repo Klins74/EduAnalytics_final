@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Callable, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_async_session
@@ -66,3 +66,30 @@ def require_role(*allowed_roles: UserRole):
             raise HTTPException(403, "Нет доступа")
         return user
     return role_checker
+
+
+def require_roles(*roles: UserRole) -> Callable[[User], User]:
+    async def dep(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return current_user
+    return dep
+
+
+def audit_event(request: Request, user: User, action: str, resource: str, ok: bool, extra: dict | None = None) -> None:
+    # lightweight audit stub; can be extended to DB or external sink
+    import logging, json
+    logger = logging.getLogger("audit")
+    payload = {
+        "action": action,
+        "resource": resource,
+        "user_id": getattr(user, 'id', None),
+        "role": getattr(user, 'role', None),
+        "ip": request.client.host if request.client else None,
+        "path": request.url.path,
+        "method": request.method,
+        "ok": ok,
+    }
+    if extra:
+        payload.update(extra)
+    logger.info(json.dumps(payload, ensure_ascii=False))

@@ -5,7 +5,7 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
-from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook, analytics, notifications, reminders, ai, module as module_routes, assignment_group as assignment_group_routes, rubric as rubric_routes, page as page_routes, discussion as discussion_routes, quiz as quiz_routes, enrollment, in_app_notifications
+from app.api.v1.routes import users, group, student, grades, course, assignment, submission, gradebook, feedback, auth, schedule, webhook, analytics, notifications, reminders, ai, module as module_routes, assignment_group as assignment_group_routes, rubric as rubric_routes, page as page_routes, discussion as discussion_routes, quiz as quiz_routes, enrollment, in_app_notifications, canvas as canvas_routes, health, ml_models, security, migrations, data_marts, notification_metrics, rbac, api_management, lti, academic_calendar, attendance, groups_sections, quiz_banks
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.models.group import Group
@@ -21,7 +21,14 @@ import contextvars
 from app.core.config import settings
 from app.services.notification import NotificationService
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.observability import ObservabilityMiddleware, AuthenticationMetricsMiddleware
+from app.middleware.ai_quota import create_ai_quota_middleware
+from app.middleware.api_versioning import APIVersioningMiddleware, ResponseStandardizationMiddleware, APIMetricsMiddleware
+from app.middleware.page_tracking import create_page_tracking_middleware
+from app.observability.tracing import setup_tracing
+from app.observability.metrics import init_global_metrics
 from app.services.scheduler import start_deadline_scheduler
+from app.services.advanced_scheduler import advanced_scheduler
 import sys
 import json
 
@@ -75,8 +82,18 @@ async def create_initial_data():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize observability
+    setup_tracing(app)
+    init_global_metrics()
+    
+    # Initialize advanced scheduler
+    await advanced_scheduler.start()
+    
     await create_initial_data()
     yield
+    
+    # Cleanup on shutdown
+    await advanced_scheduler.stop()
 
 app = FastAPI(title="EduAnalytics API", lifespan=lifespan)
 
@@ -200,6 +217,13 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(ObservabilityMiddleware)
+app.add_middleware(AuthenticationMetricsMiddleware)
+app.add_middleware(create_ai_quota_middleware())
+app.add_middleware(APIMetricsMiddleware)
+app.add_middleware(ResponseStandardizationMiddleware)
+app.add_middleware(APIVersioningMiddleware, default_version="v1")
+app.add_middleware(create_page_tracking_middleware())
 
 # Подключение маршрутов пользователей
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
@@ -236,6 +260,20 @@ app.include_router(page_routes.router, prefix="/api")
 app.include_router(discussion_routes.router, prefix="/api")
 app.include_router(enrollment.router, prefix="/api/enrollments", tags=["Enrollments"])
 app.include_router(in_app_notifications.router, prefix="/api/notifications/in-app", tags=["In-App Notifications"])
+app.include_router(canvas_routes.router, prefix="/api", tags=["Canvas"])
+app.include_router(health.router, prefix="/api", tags=["Health"])
+app.include_router(ml_models.router, prefix="/api", tags=["Machine Learning"])
+app.include_router(security.router, prefix="/api", tags=["Security"])
+app.include_router(migrations.router, prefix="/api", tags=["Migrations"])
+app.include_router(data_marts.router, prefix="/api", tags=["Data Marts"])
+app.include_router(notification_metrics.router, prefix="/api", tags=["Notification Metrics"])
+app.include_router(rbac.router, prefix="/api", tags=["RBAC & Audit"])
+app.include_router(api_management.router, prefix="/api", tags=["API Management"])
+app.include_router(lti.router, prefix="/api", tags=["LTI 1.3"])
+app.include_router(academic_calendar.router, prefix="/api", tags=["Academic Calendar"])
+app.include_router(attendance.router, prefix="/api", tags=["Attendance & Page Views"])
+app.include_router(groups_sections.router, prefix="/api", tags=["Groups & Sections"])
+app.include_router(quiz_banks.router, prefix="/api", tags=["Quiz Banks & Item Analysis"])
 
 # Health check endpoint
 @app.get("/", tags=["Health Check"])

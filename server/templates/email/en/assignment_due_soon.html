@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('assignment_due_soon_title') }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px;
+        }
+        .alert {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #856404;
+        }
+        .assignment-card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .assignment-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .assignment-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .meta-item {
+            background-color: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 2px;
+        }
+        .due-date {
+            background-color: #ffeaa7 !important;
+            color: #856404;
+            font-weight: 600;
+        }
+        .time-remaining {
+            background-color: #fab1a0;
+            color: #d63031;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ {{ t('assignment_due_soon_title') }}</h1>
+        </div>
+        
+        <div class="content">
+            <div class="alert">
+                <strong>{{ t('assignment_due_soon_message') }}</strong>
+            </div>
+            
+            <p>{{ t('greeting') }} {{ user.first_name or user.username }},</p>
+            
+            <div class="assignment-card">
+                <div class="assignment-title">{{ assignment.title }}</div>
+                
+                <div class="assignment-meta">
+                    <div class="meta-item">
+                        <strong>{{ t('course_name') }}:</strong> {{ course.name }}
+                    </div>
+                    <div class="meta-item due-date">
+                        <strong>{{ t('assignment_due_date') }}:</strong> {{ assignment.due_date | format_date('%B %d, %Y at %I:%M %p') }}
+                    </div>
+                    {% if assignment.points %}
+                    <div class="meta-item">
+                        <strong>{{ t('assignment_points') }}:</strong> {{ assignment.points }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if time_remaining %}
+                <div class="time-remaining">
+                    {{ t('time_remaining') }}: {{ time_remaining }}
+                </div>
+                {% endif %}
+                
+                {% if assignment.description %}
+                <div style="margin-top: 15px;">
+                    <strong>{{ t('assignment_description') }}:</strong>
+                    <div style="margin-top: 8px; color: #555;">
+                        {{ assignment.description | truncate(200) }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if assignment_url %}
+                <a href="{{ assignment_url }}" class="button">{{ t('view_assignment') }}</a>
+                {% endif %}
+                
+                {% if submit_url %}
+                <a href="{{ submit_url }}" class="button" style="margin-left: 10px;">{{ t('submit_now') }}</a>
+                {% endif %}
+            </div>
+            
+            <p style="margin-top: 30px;">
+                {{ t('regards') }},<br>
+                {{ t('team_signature') }}
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>{{ t('app_name') }} - Learning Analytics Platform</p>
+            <p>
+                <a href="{{ unsubscribe_url }}">{{ t('unsubscribe') }}</a> |
+                <a href="{{ preferences_url }}">{{ t('manage_preferences') }}</a>
+            </p>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">
+                {{ t('privacy_notice') }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>

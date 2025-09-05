@@ -1,0 +1,136 @@
+# Russian translations for email templates
+
+# Common
+app_name: "EduAnalytics"
+greeting: "Здравствуйте"
+regards: "С уважением"
+team_signature: "Команда EduAnalytics"
+unsubscribe: "Если вы больше не хотите получать эти письма, вы можете отписаться"
+privacy_notice: "Это письмо было отправлено вам, потому что вы зарегистрированы в нашей системе."
+
+# Subjects
+assignment_created_subject: "Новое задание: {{ assignment.title }}"
+assignment_due_soon_subject: "Задание скоро подходит к концу: {{ assignment.title }}"
+assignment_overdue_subject: "Просроченное задание: {{ assignment.title }}"
+grade_posted_subject: "Выставлена оценка за {{ assignment.title }}"
+grade_updated_subject: "Обновлена оценка за {{ assignment.title }}"
+course_enrollment_subject: "Добро пожаловать в курс {{ course.name }}"
+course_announcement_subject: "Объявление по курсу: {{ course.name }}"
+welcome_subject: "Добро пожаловать в EduAnalytics!"
+password_reset_subject: "Запрос на сброс пароля"
+account_locked_subject: "Предупреждение безопасности аккаунта"
+deadline_reminder_subject: "Напоминание о приближающихся дедлайнах"
+weekly_digest_subject: "Ваша еженедельная академическая сводка"
+canvas_sync_error_subject: "Проблема интеграции с Canvas"
+canvas_data_updated_subject: "Данные курса обновлены из Canvas"
+
+# Assignment notifications
+assignment_created_title: "Создано новое задание"
+assignment_created_message: "В вашем курсе создано новое задание."
+assignment_details: "Детали задания"
+assignment_title: "Название"
+assignment_due_date: "Срок сдачи"
+assignment_points: "Баллы"
+assignment_description: "Описание"
+view_assignment: "Посмотреть задание"
+
+assignment_due_soon_title: "Задание скоро подходит к концу"
+assignment_due_soon_message: "Не забудьте! Ваше задание скоро подходит к концу."
+time_remaining: "Времени осталось"
+submit_now: "Сдать сейчас"
+
+assignment_overdue_title: "Задание просрочено"
+assignment_overdue_message: "Ваше задание теперь просрочено. Пожалуйста, сдайте как можно скорее."
+late_penalty_notice: "За поздние сдачи может быть применён штраф."
+
+# Grade notifications
+grade_posted_title: "Выставлена новая оценка"
+grade_posted_message: "Ваша оценка была выставлена за следующее задание:"
+your_grade: "Ваша оценка"
+class_average: "Средний балл группы"
+feedback: "Обратная связь"
+view_grade: "Посмотреть детали оценки"
+
+grade_updated_title: "Оценка обновлена"
+grade_updated_message: "Ваша оценка была обновлена за следующее задание:"
+
+# Course notifications
+course_enrollment_title: "Зачисление на курс подтверждено"
+course_enrollment_message: "Вы успешно зачислены на следующий курс:"
+course_name: "Курс"
+instructor: "Преподаватель"
+start_date: "Дата начала"
+access_course: "Войти в курс"
+
+course_announcement_title: "Объявление по курсу"
+course_announcement_message: "Ваш преподаватель опубликовал новое объявление:"
+
+# System notifications
+welcome_title: "Добро пожаловать в EduAnalytics!"
+welcome_message: "Спасибо за присоединение к нашей платформе аналитики обучения."
+account_details: "Детали аккаунта"
+username: "Имя пользователя"
+role: "Роль"
+getting_started: "Начало работы"
+login_link: "Войти в ваш аккаунт"
+
+password_reset_title: "Запрос на сброс пароля"
+password_reset_message: "Вы запросили сброс пароля. Нажмите на ссылку ниже, чтобы продолжить:"
+reset_password: "Сбросить пароль"
+reset_expires: "Эта ссылка истечёт через 24 часа."
+ignore_message: "Если вы не запрашивали это, пожалуйста, игнорируйте это письмо."
+
+account_locked_title: "Предупреждение безопасности аккаунта"
+account_locked_message: "Ваш аккаунт был временно заблокирован по соображениям безопасности."
+contact_support: "Связаться с поддержкой"
+unlock_instructions: "Пожалуйста, свяжитесь с поддержкой для разблокировки аккаунта."
+
+# Reminder notifications
+deadline_reminder_title: "Приближающиеся дедлайны"
+deadline_reminder_message: "У вас есть следующие приближающиеся дедлайны:"
+due_today: "Сегодня"
+due_tomorrow: "Завтра"
+due_this_week: "На этой неделе"
+no_deadlines: "Нет приближающихся дедлайнов"
+
+weekly_digest_title: "Ваша еженедельная сводка"
+weekly_digest_message: "Вот сводка вашей академической активности на этой неделе:"
+assignments_completed: "Выполненные задания"
+assignments_pending: "Ожидающие задания"
+average_grade: "Средняя оценка"
+courses_active: "Активные курсы"
+view_dashboard: "Посмотреть панель"
+
+# Canvas integration
+canvas_sync_error_title: "Проблема интеграции с Canvas"
+canvas_sync_error_message: "Возникла проблема при синхронизации данных из Canvas:"
+error_details: "Детали ошибки"
+retry_sync: "Повторить синхронизацию"
+contact_admin: "Связаться с администратором"
+
+canvas_data_updated_title: "Данные курса обновлены"
+canvas_data_updated_message: "Данные вашего курса были обновлены из Canvas:"
+items_updated: "Обновлённые элементы"
+assignments_synced: "Синхронизированные задания"
+grades_synced: "Синхронизированные оценки"
+last_sync: "Последняя синхронизация"
+
+# Common actions
+view_details: "Посмотреть детали"
+learn_more: "Узнать больше"
+take_action: "Принять меры"
+manage_preferences: "Управлять настройками email"
+
+# Time formatting
+days: "дней"
+hours: "часов"
+minutes: "минут"
+ago: "назад"
+remaining: "осталось"
+
+# Status
+submitted: "Сдано"
+pending: "Ожидает"
+graded: "Оценено"
+late: "Поздно"
+on_time: "Вовремя"

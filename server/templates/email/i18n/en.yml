@@ -1,0 +1,136 @@
+# English translations for email templates
+
+# Common
+app_name: "EduAnalytics"
+greeting: "Hello"
+regards: "Best regards"
+team_signature: "The EduAnalytics Team"
+unsubscribe: "If you no longer wish to receive these emails, you can unsubscribe"
+privacy_notice: "This email was sent to you because you are registered in our system."
+
+# Subjects
+assignment_created_subject: "New Assignment: {{ assignment.title }}"
+assignment_due_soon_subject: "Assignment Due Soon: {{ assignment.title }}"
+assignment_overdue_subject: "Overdue Assignment: {{ assignment.title }}"
+grade_posted_subject: "Grade Posted for {{ assignment.title }}"
+grade_updated_subject: "Grade Updated for {{ assignment.title }}"
+course_enrollment_subject: "Welcome to {{ course.name }}"
+course_announcement_subject: "Course Announcement: {{ course.name }}"
+welcome_subject: "Welcome to EduAnalytics!"
+password_reset_subject: "Password Reset Request"
+account_locked_subject: "Account Security Alert"
+deadline_reminder_subject: "Upcoming Deadlines Reminder"
+weekly_digest_subject: "Your Weekly Academic Summary"
+canvas_sync_error_subject: "Canvas Integration Issue"
+canvas_data_updated_subject: "Course Data Updated from Canvas"
+
+# Assignment notifications
+assignment_created_title: "New Assignment Created"
+assignment_created_message: "A new assignment has been created in your course."
+assignment_details: "Assignment Details"
+assignment_title: "Title"
+assignment_due_date: "Due Date"
+assignment_points: "Points"
+assignment_description: "Description"
+view_assignment: "View Assignment"
+
+assignment_due_soon_title: "Assignment Due Soon"
+assignment_due_soon_message: "Don't forget! Your assignment is due soon."
+time_remaining: "Time Remaining"
+submit_now: "Submit Now"
+
+assignment_overdue_title: "Assignment is Overdue"
+assignment_overdue_message: "Your assignment is now overdue. Please submit as soon as possible."
+late_penalty_notice: "Late submissions may receive a penalty."
+
+# Grade notifications
+grade_posted_title: "New Grade Posted"
+grade_posted_message: "Your grade has been posted for the following assignment:"
+your_grade: "Your Grade"
+class_average: "Class Average"
+feedback: "Feedback"
+view_grade: "View Grade Details"
+
+grade_updated_title: "Grade Updated"
+grade_updated_message: "Your grade has been updated for the following assignment:"
+
+# Course notifications
+course_enrollment_title: "Course Enrollment Confirmed"
+course_enrollment_message: "You have been successfully enrolled in the following course:"
+course_name: "Course"
+instructor: "Instructor"
+start_date: "Start Date"
+access_course: "Access Course"
+
+course_announcement_title: "Course Announcement"
+course_announcement_message: "Your instructor has posted a new announcement:"
+
+# System notifications
+welcome_title: "Welcome to EduAnalytics!"
+welcome_message: "Thank you for joining our learning analytics platform."
+account_details: "Account Details"
+username: "Username"
+role: "Role"
+getting_started: "Getting Started"
+login_link: "Login to Your Account"
+
+password_reset_title: "Password Reset Request"
+password_reset_message: "You have requested to reset your password. Click the link below to proceed:"
+reset_password: "Reset Password"
+reset_expires: "This link will expire in 24 hours."
+ignore_message: "If you didn't request this, please ignore this email."
+
+account_locked_title: "Account Security Alert"
+account_locked_message: "Your account has been temporarily locked due to security reasons."
+contact_support: "Contact Support"
+unlock_instructions: "Please contact support to unlock your account."
+
+# Reminder notifications
+deadline_reminder_title: "Upcoming Deadlines"
+deadline_reminder_message: "You have the following upcoming deadlines:"
+due_today: "Due Today"
+due_tomorrow: "Due Tomorrow"
+due_this_week: "Due This Week"
+no_deadlines: "No upcoming deadlines"
+
+weekly_digest_title: "Your Weekly Summary"
+weekly_digest_message: "Here's a summary of your academic activity this week:"
+assignments_completed: "Assignments Completed"
+assignments_pending: "Assignments Pending"
+average_grade: "Average Grade"
+courses_active: "Active Courses"
+view_dashboard: "View Dashboard"
+
+# Canvas integration
+canvas_sync_error_title: "Canvas Integration Issue"
+canvas_sync_error_message: "There was an issue syncing data from Canvas:"
+error_details: "Error Details"
+retry_sync: "Retry Sync"
+contact_admin: "Contact Administrator"
+
+canvas_data_updated_title: "Course Data Updated"
+canvas_data_updated_message: "Your course data has been updated from Canvas:"
+items_updated: "Items Updated"
+assignments_synced: "Assignments Synced"
+grades_synced: "Grades Synced"
+last_sync: "Last Sync"
+
+# Common actions
+view_details: "View Details"
+learn_more: "Learn More"
+take_action: "Take Action"
+manage_preferences: "Manage Email Preferences"
+
+# Time formatting
+days: "days"
+hours: "hours"
+minutes: "minutes"
+ago: "ago"
+remaining: "remaining"
+
+# Status
+submitted: "Submitted"
+pending: "Pending"
+graded: "Graded"
+late: "Late"
+on_time: "On Time"

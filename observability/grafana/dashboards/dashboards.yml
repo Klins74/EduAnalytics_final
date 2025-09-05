@@ -1,0 +1,24 @@
+apiVersion: 1
+
+providers:
+  # EduAnalytics dashboards
+  - name: 'eduanalytics'
+    orgId: 1
+    folder: 'EduAnalytics'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/eduanalytics
+
+  # System dashboards
+  - name: 'system'
+    orgId: 1
+    folder: 'System'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/system

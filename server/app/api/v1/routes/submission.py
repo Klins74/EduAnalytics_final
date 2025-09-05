@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, require_role as _require_role, audit_event
 from app.models.user import User, UserRole
 from app.schemas.submission import (
     SubmissionCreate, 
@@ -41,7 +41,7 @@ async def get_submissions(
     assignment_id: Optional[int] = None,
     course_id: Optional[int] = None,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin, UserRole.student))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin, UserRole.student))
 ):
     """
     Получить список сдач заданий.
@@ -99,7 +99,7 @@ async def get_submissions(
 async def get_submission(
     submission_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin, UserRole.student))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin, UserRole.student))
 ):
     """
     Получить сдачу задания по ID.
@@ -306,7 +306,7 @@ async def create_grade(
     submission_id: int,
     grade_data: GradeCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin))
 ):
     """
     Поставить оценку за сдачу задания.

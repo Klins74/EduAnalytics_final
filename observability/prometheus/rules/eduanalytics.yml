@@ -1,0 +1,179 @@
+groups:
+  - name: eduanalytics.api
+    rules:
+      # API error rate
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            rate(eduanalytics_api_errors_total[5m]) / 
+            rate(eduanalytics_api_requests_total[5m])
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} for endpoint {{ $labels.endpoint }}"
+
+      # API response time
+      - alert: SlowAPIResponses
+        expr: |
+          histogram_quantile(0.95, 
+            rate(eduanalytics_api_request_duration_seconds_bucket[5m])
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API responses detected"
+          description: "95th percentile response time is {{ $value }}s for endpoint {{ $labels.endpoint }}"
+
+      # Authentication failures
+      - alert: HighAuthenticationFailureRate
+        expr: |
+          rate(eduanalytics_auth_failures_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is {{ $value }} failures/second"
+
+  - name: eduanalytics.database
+    rules:
+      # Database connection errors
+      - alert: DatabaseConnectionErrors
+        expr: |
+          rate(eduanalytics_db_errors_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection errors detected"
+          description: "Database error rate is {{ $value }} errors/second"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(eduanalytics_db_query_duration_seconds_bucket[5m])
+          ) > 5.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s"
+
+  - name: eduanalytics.canvas
+    rules:
+      # Canvas API errors
+      - alert: CanvasAPIErrors
+        expr: |
+          rate(eduanalytics_canvas_api_calls_total{status="error"}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Canvas API errors detected"
+          description: "Canvas API error rate is {{ $value }} errors/second"
+
+      # Canvas sync failures
+      - alert: CanvasSyncFailures
+        expr: |
+          increase(eduanalytics_canvas_sync_operations_total{status="failure"}[1h]) > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple Canvas sync failures"
+          description: "{{ $value }} Canvas sync failures in the last hour"
+
+  - name: eduanalytics.notifications
+    rules:
+      # Notification failures
+      - alert: NotificationFailures
+        expr: |
+          rate(eduanalytics_notification_failures_total[5m]) > 0.02
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High notification failure rate"
+          description: "Notification failure rate is {{ $value }} failures/second for channel {{ $labels.channel }}"
+
+      # Notification queue size
+      - alert: LargeNotificationQueue
+        expr: |
+          eduanalytics_notification_queue_size > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Large notification queue"
+          description: "Notification queue size is {{ $value }} items"
+
+  - name: eduanalytics.system
+    rules:
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: |
+          (
+            node_filesystem_free_bytes{fstype!="tmpfs"} / 
+            node_filesystem_size_bytes{fstype!="tmpfs"}
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.mountpoint }}"
+
+  - name: eduanalytics.business
+    rules:
+      # Low submission rate
+      - alert: LowSubmissionRate
+        expr: |
+          rate(eduanalytics_submissions_processed_total[1h]) < 1
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low submission processing rate"
+          description: "Submission rate is {{ $value }} submissions/hour"
+
+      # High grade failure rate
+      - alert: HighGradeFailureRate
+        expr: |
+          (
+            rate(eduanalytics_grades_assigned_total{grade_range="F"}[1h]) /
+            rate(eduanalytics_grades_assigned_total[1h])
+          ) > 0.3
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "High failure rate in grading"
+          description: "{{ $value | humanizePercentage }} of grades are failing"

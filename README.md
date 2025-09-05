@@ -1,286 +1,330 @@
-# EduAnalytics - Canvas LMS совместимая платформа
+# EduAnalytics - Advanced Educational Analytics Platform
 
-Современная образовательная платформа, построенная на архитектуре Canvas LMS с использованием современного стека технологий.
+[![CI/CD Pipeline](https://github.com/your-org/eduanalytics/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-org/eduanalytics/actions/workflows/ci-cd.yml)
+[![Coverage](https://codecov.io/gh/your-org/eduanalytics/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/eduanalytics)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=eduanalytics&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=eduanalytics)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 Основные возможности
+EduAnalytics is a comprehensive educational analytics platform that integrates with Canvas LMS to provide advanced insights, AI-powered recommendations, and predictive analytics for educational institutions.
 
-### 📚 Canvas LMS совместимость
-- **Quiz Engine** - полнофункциональная система тестирования
-- **Pages** - создание и управление материалами курса
-- **Discussions** - форумы и обсуждения
-- **Modules** - организация контента по модулям
-- **Assignment Groups** - группы заданий
-- **Rubrics** - критерии оценивания
+## 🚀 Key Features
 
-### 🤖 AI интеграция
-- **Ollama** - локальная AI модель для обработки запросов
-- **Intent Extraction** - извлечение намерений из пользовательских запросов
-- **Function Calling** - вызов API функций через AI
-- **AI-powered Analytics** - аналитика с использованием AI
+### 📊 **Advanced Analytics & Reporting**
+- **Real-time Dashboards**: Interactive dashboards with course, student, and institutional analytics
+- **Predictive Analytics**: ML-powered student performance prediction and risk assessment
+- **Attendance Tracking**: Comprehensive attendance and engagement metrics
+- **Grade Analytics**: Advanced gradebook analytics with trend analysis
 
-### 🎨 Современный UI/UX
-- **Responsive Design** - адаптивный дизайн для всех устройств
-- **Rich Markdown Editor** - редактор с подсветкой синтаксиса
-- **Search & Filter** - продвинутый поиск и фильтрация
-- **Content Statistics** - визуализация статистики
-- **Notification System** - система уведомлений
-- **Confirmation Dialogs** - диалоги подтверждения
+### 🤖 **AI & Machine Learning**
+- **AI-Powered Insights**: Intelligent recommendations for students and instructors
+- **RAG System**: Retrieval Augmented Generation for contextual content search
+- **Performance Prediction**: ML models for student success prediction
+- **Chatbot Integration**: AI assistant for educational support
+- **Usage Quotas**: Role-based AI request quotas and rate limiting
 
-## 🛠 Технический стек
+### 🔗 **Canvas LMS Integration**
+- **OAuth2 Authentication**: Secure Canvas API integration
+- **Real-time Sync**: Live Events webhook integration for real-time data
+- **Data Platform**: Canvas DAP integration for comprehensive data ingestion
+- **LTI 1.3 Support**: Full LTI integration with grade passback
+- **Assignment Sync**: Bi-directional assignment and submission sync
 
-### Backend
-- **FastAPI** - современный веб-фреймворк
-- **SQLAlchemy** - ORM для работы с базой данных
-- **PostgreSQL** - основная база данных
-- **Redis** - кэширование и очереди
-- **Alembic** - миграции базы данных
-- **Docker** - контейнеризация
+### 📱 **Modern User Experience**
+- **React Frontend**: Modern, responsive web interface
+- **Multi-language Support**: i18n support (English, Russian, Kazakh)
+- **Role-based Access**: Granular permissions for students, teachers, and admins
+- **Mobile Responsive**: Optimized for desktop, tablet, and mobile devices
 
-### Frontend
-- **React 18** - современная библиотека UI
-- **Tailwind CSS** - utility-first CSS фреймворк
-- **React Router** - маршрутизация
-- **Custom Hooks** - переиспользуемая логика
+### 🔔 **Notification System**
+- **Multi-channel Notifications**: Email, SMS, Telegram, and in-app notifications
+- **Smart Scheduling**: Quiet hours and user preference management
+- **Template Engine**: Customizable, localized notification templates
+- **Delivery Tracking**: Comprehensive notification delivery analytics
 
-### AI & ML
-- **Ollama** - локальная LLM
-- **Google Gemini** - облачная AI модель
-- **OpenRouter** - API для различных AI моделей
+### 🔒 **Security & Privacy**
+- **Enterprise Security**: Multiple secrets management backends (Vault, Docker Secrets)
+- **Data Retention**: GDPR-compliant data retention and anonymization policies
+- **Rate Limiting**: Advanced rate limiting with Redis backend
+- **Audit Logging**: Comprehensive audit trails and security monitoring
 
-## 📁 Структура проекта
+### 📈 **Observability & Monitoring**
+- **OpenTelemetry**: Distributed tracing and metrics collection
+- **Grafana Dashboards**: Pre-configured monitoring dashboards
+- **Prometheus Metrics**: Application and infrastructure metrics
+- **Health Checks**: Comprehensive health and readiness endpoints
 
-```
-EduAnalytics/
-├── server/                 # Backend
-│   ├── app/
-│   │   ├── api/           # API endpoints
-│   │   ├── core/          # Конфигурация и безопасность
-│   │   ├── crud/          # CRUD операции
-│   │   ├── models/        # SQLAlchemy модели
-│   │   ├── schemas/       # Pydantic схемы
-│   │   └── services/      # Бизнес-логика
-│   ├── migrations/        # Миграции базы данных
-│   └── docker-compose.yml # Docker конфигурация
-├── src/                    # Frontend
-│   ├── components/        # React компоненты
-│   │   └── ui/           # UI компоненты
-│   ├── pages/            # Страницы приложения
-│   ├── api/              # API клиенты
-│   └── utils/            # Утилиты
-└── public/                # Статические файлы
-```
+## 🏗️ Architecture
 
-## 🚀 Быстрый старт
+### **Backend Stack**
+- **FastAPI**: High-performance Python web framework
+- **SQLAlchemy 2.0**: Modern ORM with async support
+- **PostgreSQL**: Primary database with full-text search
+- **Redis**: Caching, rate limiting, and message queuing
+- **Alembic**: Database migration management
 
-### 1. Клонирование репозитория
+### **Frontend Stack**
+- **React 18**: Modern frontend framework
+- **Vite**: Fast build tool and development server
+- **Tailwind CSS**: Utility-first CSS framework
+- **React Router**: Client-side routing
+- **i18next**: Internationalization framework
+
+### **DevOps & Deployment**
+- **Docker**: Containerization with multi-stage builds
+- **Docker Compose**: Local development and staging deployment
+- **GitHub Actions**: CI/CD pipeline with automated testing
+- **Multi-environment**: Dev, staging, and production configurations
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker and Docker Compose
+- Git
+- Node.js 18+ (for frontend development)
+- Python 3.11+ (for backend development)
+
+### Local Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/eduanalytics.git
+   cd eduanalytics
+   ```
+
+2. **Start development environment**
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.profiles.yml --profile dev up -d
+   ```
+
+3. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+   - Grafana: http://localhost:3001
+
+### Production Deployment
+
+1. **Configure environment**
+   ```bash
+   cp config/env.production .env
+   # Edit .env with your production settings
+   ```
+
+2. **Deploy with Docker Compose**
+   ```bash
+   ./scripts/deploy.sh --environment production --version v1.0.0 --build
+   ```
+
+3. **Alternative: Deploy with Docker Swarm**
+   ```bash
+   docker stack deploy -c docker-compose.yml -c docker-compose.profiles.yml eduanalytics
+   ```
+
+## 📖 Documentation
+
+### **API Documentation**
+- **Interactive Docs**: Available at `/docs` (Swagger UI)
+- **OpenAPI Spec**: Available at `/openapi.json`
+- **Postman Collection**: [Download here](docs/EduAnalytics.postman_collection.json)
+
+### **Integration Guides**
+- [Canvas LMS Integration](docs/canvas-integration.md)
+- [AI Services Setup](docs/ai-integration.md)
+- [Notification Configuration](docs/notifications-setup.md)
+- [Security Configuration](docs/security-guide.md)
+
+### **Development Guides**
+- [Development Setup](docs/development-setup.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Testing Guide](docs/testing-guide.md)
+- [Deployment Guide](docs/deployment-guide.md)
+
+## 🔧 Configuration
+
+### **Environment Variables**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ENV` | Environment (development/staging/production) | `development` |
+| `DATABASE_URL` | PostgreSQL connection string | - |
+| `REDIS_URL` | Redis connection string | - |
+| `SECRET_KEY` | Application secret key | - |
+| `CANVAS_API_KEY` | Canvas API access key | - |
+| `CANVAS_BASE_URL` | Canvas instance URL | - |
+
+### **Secrets Management**
+
+EduAnalytics supports multiple secrets management backends:
+
+- **Docker Secrets**: For Docker Swarm deployments
+- **HashiCorp Vault**: For enterprise secret management
+- **Environment Variables**: For simple deployments
+- **Local Encrypted Files**: For development
+
+Example Vault configuration:
 ```bash
-git clone https://github.com/your-username/EduAnalytics.git
-cd EduAnalytics
+export VAULT_URL=https://vault.company.com
+export VAULT_TOKEN=your-vault-token
+export VAULT_SECRET_PATH=secret/eduanalytics
 ```
 
-### 2. Настройка окружения
-Скопируйте `ENV.EXAMPLE` в `.env` и отредактируйте значения для вашей среды. Дополнительно см. `ENVIRONMENT_VARIABLES.md`.
+## 🧪 Testing
 
-### 3. Запуск с Docker
+### **Running Tests**
 ```bash
-# Запуск всех сервисов
-docker-compose up -d
+# All tests
+cd server && pytest
 
-# Просмотр логов
-docker-compose logs -f api
+# With coverage
+pytest --cov=app --cov-report=html
+
+# Specific test categories
+pytest tests/unit/          # Unit tests
+pytest tests/integration/   # Integration tests
+pytest tests/api/           # API contract tests
 ```
 
-### 4. Запуск Frontend
-```bash
-cd src
-npm install
-npm run dev
-```
+### **Test Coverage**
+- **Unit Tests**: 85%+ coverage requirement
+- **Integration Tests**: Key workflows and API endpoints
+- **Contract Tests**: API schema validation
+- **Smoke Tests**: Production health checks
 
-### 5. Доступ к приложению
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **Ollama**: http://localhost:11434
-- **Database**: localhost:5432
+## 📊 Monitoring & Observability
 
-## 🔧 Конфигурация
+### **Metrics & Dashboards**
+- **Application Metrics**: Request latency, error rates, throughput
+- **Business Metrics**: User engagement, course analytics, AI usage
+- **Infrastructure Metrics**: CPU, memory, disk, network usage
+- **Custom Dashboards**: Role-specific analytics dashboards
 
-### Environment Variables
-```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/eduanalytics
+### **Alerting**
+- **SLA Monitoring**: 99.9% uptime target
+- **Performance Alerts**: Response time > 500ms
+- **Error Rate Alerts**: Error rate > 1%
+- **Business Alerts**: Low engagement, at-risk students
 
-# AI Providers
-# выберите один из провайдеров: gemini | openrouter | ollama
-AI_PROVIDER=gemini
+### **Logging**
+- **Structured Logging**: JSON format with correlation IDs
+- **Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **Log Aggregation**: Centralized logging with search capabilities
+- **Audit Logs**: Security and compliance event tracking
 
-# Gemini
-GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=gemini-1.5-flash
+## 🔐 Security
 
-# OpenRouter (альтернатива Gemini)
-OPENROUTER_API_KEY=your_openrouter_key
-AI_MODEL=openrouter/auto
+### **Authentication & Authorization**
+- **JWT Tokens**: Secure stateless authentication
+- **Role-Based Access Control**: Student, Teacher, Admin roles
+- **Canvas SSO**: Single sign-on integration
+- **Session Management**: Configurable timeout and refresh
 
-# Ollama (локальный провайдер)
-OLLAMA_API_BASE=http://ollama:11434
-OLLAMA_MODEL=tinyllama
+### **Data Protection**
+- **Encryption**: AES-256 encryption for sensitive data
+- **TLS/SSL**: HTTPS everywhere with certificate management
+- **Data Anonymization**: GDPR-compliant data handling
+- **Audit Logging**: Complete audit trail for compliance
 
-# Security
-SECRET_KEY=your-secret-key
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
+### **Security Monitoring**
+- **Vulnerability Scanning**: Automated dependency scanning
+- **Security Headers**: OWASP recommended headers
+- **Rate Limiting**: DDoS protection and abuse prevention
+- **Intrusion Detection**: Monitoring for suspicious activities
 
-Подробный список и готовый пример см. в `ENVIRONMENT_VARIABLES.md`. Для Windows см. `WINDOWS_UNICODE_TROUBLESHOOTING.md`.
+## 🤝 Contributing
 
-### Docker Services
-- **api** - FastAPI приложение
-- **db** - PostgreSQL база данных
-- **redis** - Redis кэш
-- **ollama** - Локальная AI модель
+We welcome contributions from the community! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
 
-## 📊 API Endpoints
+- Code of Conduct
+- Development workflow
+- Pull request process
+- Testing requirements
+- Documentation standards
 
-### Authentication
-- `POST /api/auth/token` - Получение JWT токена
-- `POST /api/auth/refresh` - Обновление токена
+### **Development Workflow**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
-### Quiz Engine
-- `GET /api/quizzes` - Список квизов
-- `POST /api/quizzes` - Создание квиза
-- `GET /api/quizzes/{id}` - Получение квиза
-- `PUT /api/quizzes/{id}` - Обновление квиза
-- `DELETE /api/quizzes/{id}` - Удаление квиза
+## 📄 License
 
-### Pages
-- `GET /api/pages/course/{course_id}` - Страницы курса
-- `POST /api/pages` - Создание страницы
-- `PUT /api/pages/{id}` - Обновление страницы
-- `DELETE /api/pages/{id}` - Удаление страницы
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Discussions
-- `GET /api/discussions/course/{course_id}` - Темы курса
-- `POST /api/discussions` - Создание темы
-- `POST /api/discussions/{id}/entries` - Добавление сообщения
+## 🆘 Support
 
-### AI Services
-- `POST /api/ai/chat` - AI чат
-- `POST /api/ai/chat/stream` - Стриминг AI ответов
-- `POST /api/ai/intent` - Извлечение намерений
-- `POST /api/ai/function` - Вызов функций
-
-## 🎯 Основные функции
-
-### Quiz Engine
-- Создание различных типов вопросов
-- Автоматическое оценивание
-- AI-powered обратная связь
-- Статистика прохождения
-
-### Content Management
-- Rich text редактор с Markdown
-- Организация по модулям
-- Версионирование контента
-- Поиск и фильтрация
-
-### Discussion System
-- Треды и ответы
-- Модерация контента
-- Уведомления о новых сообщениях
-- Интеграция с модулями
-
-### Analytics Dashboard
-- Статистика по курсам
-- Прогресс студентов
-- AI-powered рекомендации
-- Экспорт отчетов
-
-## 🔒 Безопасность
-
-- **JWT Authentication** - безопасная аутентификация
-- **RBAC** - ролевая модель доступа
-- **Input Validation** - валидация входных данных
-- **SQL Injection Protection** - защита от SQL инъекций
-- **CORS** - настройки безопасности браузера
-
-## 📈 Производительность
-
-- **Async/Await** - асинхронная обработка запросов
-- **Database Indexing** - оптимизация запросов
-- **Redis Caching** - кэширование данных
-- **Connection Pooling** - пул соединений с БД
-- **Lazy Loading** - ленивая загрузка данных
-
-## 🧪 Тестирование
-
-### Backend Tests
-```bash
-cd server
-pytest tests/ -v
-```
-
-### Frontend Tests
-```bash
-cd src
-npm test
-```
-
-### API Tests
-```bash
-# Тестирование Quiz Engine
-curl -X GET "http://localhost:8000/api/quizzes" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-
-# Тестирование AI
-curl -X POST "http://localhost:8000/api/ai/chat" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"message": "Привет, как дела?"}'
-```
-
-## 🚀 Развертывание
-
-### Production
-```bash
-# Сборка production образа
-docker build -t eduanalytics:prod .
-
-# Запуск production
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Staging
-```bash
-# Развертывание на staging сервере
-docker-compose -f docker-compose.staging.yml up -d
-```
-
-## 🤝 Вклад в проект
-
-1. Fork репозитория
-2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit изменения (`git commit -m 'Add amazing feature'`)
-4. Push в branch (`git push origin feature/amazing-feature`)
-5. Откройте Pull Request
-
-## 📝 Лицензия
-
-Этот проект лицензирован под MIT License - см. файл [LICENSE](LICENSE) для деталей.
-
-## 🙏 Благодарности
-
-- **Canvas LMS** - за архитектурные решения
-- **FastAPI** - за отличный веб-фреймворк
-- **React Team** - за современную UI библиотеку
-- **Tailwind CSS** - за utility-first подход
-
-## 📞 Поддержка
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/EduAnalytics/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/EduAnalytics/discussions)
+### **Getting Help**
+- **Documentation**: Check our comprehensive docs
+- **Issues**: Open a GitHub issue
+- **Discussions**: Join our GitHub Discussions
 - **Email**: support@eduanalytics.com
+
+### **Commercial Support**
+For enterprise support, training, and custom development:
+- **Email**: enterprise@eduanalytics.com
+- **Website**: https://eduanalytics.com
+
+## 🎯 Roadmap
+
+### **Q1 2024**
+- [ ] Advanced ML model marketplace
+- [ ] Mobile application (React Native)
+- [ ] Advanced reporting builder
+- [ ] Integration with Google Classroom
+
+### **Q2 2024**
+- [ ] Video analytics integration
+- [ ] Advanced plagiarism detection
+- [ ] Learning path recommendations
+- [ ] Parent/guardian portal
+
+### **Q3 2024**
+- [ ] Virtual classroom integration
+- [ ] Advanced assessment analytics
+- [ ] Peer collaboration analytics
+- [ ] Accessibility enhancements
+
+## 📈 Analytics Features
+
+### **Student Analytics**
+- Performance tracking and predictions
+- Engagement pattern analysis
+- Learning path optimization
+- Risk factor identification
+- Personalized recommendations
+
+### **Instructor Analytics**
+- Course effectiveness metrics
+- Student engagement insights
+- Assessment analytics
+- Time-to-intervention alerts
+- Teaching effectiveness reports
+
+### **Institutional Analytics**
+- Cross-course performance analysis
+- Resource utilization metrics
+- Retention and success rates
+- Comparative analytics
+- Strategic planning insights
+
+## 🧠 AI Capabilities
+
+### **Machine Learning Models**
+- **Performance Prediction**: Predict student success probability
+- **Risk Assessment**: Identify at-risk students early
+- **Recommendation Engine**: Personalized learning recommendations
+- **Engagement Analysis**: Analyze student participation patterns
+- **Content Optimization**: Optimize course content effectiveness
+
+### **Natural Language Processing**
+- **Content Analysis**: Analyze discussion posts and submissions
+- **Sentiment Analysis**: Monitor student sentiment and satisfaction
+- **Automated Feedback**: Generate personalized feedback
+- **Question Answering**: AI-powered student support chatbot
+- **Content Search**: Semantic search across course materials
 
 ---
 
-**EduAnalytics** - современная образовательная платформа для будущего обучения! 🎓✨
+**Built with ❤️ for educators and students worldwide**
+
+*EduAnalytics - Transforming education through data-driven insights*

@@ -1,0 +1,294 @@
+name: EduAnalytics CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: eduanalytics_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        cd server
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-ml.txt
+        pip install -e .
+    
+    - name: Run linting
+      run: |
+        cd server
+        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check app/
+        isort --check app/
+    
+    - name: Run type checking
+      run: |
+        cd server
+        mypy app/ --ignore-missing-imports
+    
+    - name: Run security checks
+      run: |
+        cd server
+        pip install bandit
+        bandit -r app/ -ll
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eduanalytics_test
+        REDIS_URL: redis://localhost:6379/15
+        ENV: testing
+        SECRET_KEY: test-secret-key
+        JWT_SECRET_KEY: test-jwt-secret
+      run: |
+        cd server
+        pytest tests/ \
+          -v \
+          --cov=app \
+          --cov-report=xml \
+          --cov-report=html \
+          --junit-xml=test-results.xml \
+          --cov-fail-under=85 \
+          --cov-branch
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./server/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          server/test-results.xml
+          server/htmlcov/
+  
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+  
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./server/Dockerfile.production
+        target: production
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          VERSION=${{ github.ref_name }}
+          COMMIT_HASH=${{ github.sha }}
+  
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    environment:
+      name: staging
+      url: https://eduanalytics-staging.institution.edu
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # In a real deployment, you would:
+        # 1. SSH to staging server
+        # 2. Pull the new image
+        # 3. Update docker-compose configuration
+        # 4. Restart services
+        # 5. Run health checks
+        
+        # Example deployment command:
+        # ssh staging-server "cd /opt/eduanalytics && \
+        #   docker-compose -f docker-compose.yml -f docker-compose.profiles.yml \
+        #   --profile staging pull && \
+        #   docker-compose -f docker-compose.yml -f docker-compose.profiles.yml \
+        #   --profile staging up -d"
+  
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://eduanalytics.institution.edu
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create deployment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const deployment = await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.ref,
+            environment: 'production',
+            description: 'Deploy version ${{ github.ref_name }} to production',
+            auto_merge: false,
+            required_contexts: []
+          });
+          
+          console.log('Created deployment:', deployment.data.id);
+    
+    - name: Deploy to production
+      run: |
+        echo "Deploying version ${{ github.ref_name }} to production..."
+        # Production deployment steps would go here
+        # This typically involves:
+        # 1. Blue-green deployment
+        # 2. Database migrations
+        # 3. Service updates
+        # 4. Health checks
+        # 5. Rollback capability
+    
+    - name: Run smoke tests
+      run: |
+        echo "Running post-deployment smoke tests..."
+        # Add smoke tests here
+    
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "Production deployment successful for version ${{ github.ref_name }}"
+        # Send notifications (Slack, email, etc.)
+    
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "Deployment failed, initiating rollback..."
+        # Rollback procedures would go here
+  
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [test, build, deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.test.result == 'success' && needs.build.result == 'success'
+      run: |
+        echo "Pipeline completed successfully!"
+        # Send success notifications
+    
+    - name: Notify on failure
+      if: contains(needs.*.result, 'failure')
+      run: |
+        echo "Pipeline failed!"
+        # Send failure notifications

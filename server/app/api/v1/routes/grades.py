@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import get_async_session
 from app.models import Grade, Student, User
 from app.schemas import GradeCreate, GradeResponse
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, require_role as _require_role, audit_event
 from app.models.user import UserRole
 from app.services.cache import analytics_cache
 
@@ -20,7 +20,7 @@ async def get_grades(db: AsyncSession = Depends(get_async_session), current_user
 async def create_grade(
     grade_in: GradeCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin))
 ):
     try:
         print("create_grade input:", grade_in)
@@ -62,7 +62,7 @@ async def update_grade(
     grade_id: int,
     grade_in: GradeCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.teacher, UserRole.admin))
+    current_user: User = Depends(_require_role(UserRole.teacher, UserRole.admin))
 ):
     result = await db.execute(select(Grade).where(Grade.id == grade_id))
     grade = result.scalar_one_or_none()
@@ -83,7 +83,7 @@ async def update_grade(
 async def delete_grade(
     grade_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_role(UserRole.admin))
+    current_user: User = Depends(_require_role(UserRole.admin))
 ):
     result = await db.execute(select(Grade).where(Grade.id == grade_id))
     grade = result.scalar_one_or_none()

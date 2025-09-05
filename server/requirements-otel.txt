@@ -1,0 +1,15 @@
+# OpenTelemetry packages for observability
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-auto-instrumentation==0.42b0
+opentelemetry-exporter-otlp==1.21.0
+opentelemetry-exporter-jaeger==1.21.0
+opentelemetry-exporter-prometheus==1.12.0rc1
+opentelemetry-instrumentation-fastapi==0.42b0
+opentelemetry-instrumentation-sqlalchemy==0.42b0
+opentelemetry-instrumentation-redis==0.42b0
+opentelemetry-instrumentation-httpx==0.42b0
+opentelemetry-instrumentation-psycopg2==0.42b0
+opentelemetry-instrumentation-asyncio==0.42b0
+opentelemetry-semantic-conventions==0.42b0
+prometheus-client==0.19.0

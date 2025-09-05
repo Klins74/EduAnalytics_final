@@ -1,0 +1,68 @@
+[run]
+source = app
+branch = True
+omit = 
+    app/__init__.py
+    app/*/migrations/*
+    app/*/tests/*
+    app/test_*.py
+    app/*_test.py
+    app/tests/*
+    */venv/*
+    */virtualenv/*
+    */.venv/*
+    */site-packages/*
+    */tests/*
+    test_*.py
+    *_test.py
+    conftest.py
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods, they aren't run:
+    @(abc\.)?abstractmethod
+
+    # Don't complain about type checking imports
+    if TYPE_CHECKING:
+
+    # Don't complain about platform specific code
+    pragma: no cover
+
+    # Don't complain about deprecation warnings
+    warnings\.warn
+
+    # Don't complain about logging statements
+    logger\.
+
+ignore_errors = True
+show_missing = True
+skip_covered = False
+precision = 2
+
+[html]
+directory = htmlcov
+title = EduAnalytics Test Coverage Report
+
+[xml]
+output = coverage.xml
+
+[paths]
+source = 
+    app/
+    */site-packages/app/
