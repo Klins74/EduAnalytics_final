@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/react";
 import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
+import "./i18n";
 
 // Инициализация Sentry с использованием переменных окружения
 Sentry.init({ 
