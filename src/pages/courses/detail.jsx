@@ -124,6 +124,19 @@ const CourseDetail = () => {
 											</div>
 										)}
 										<div className="mt-4 text-sm text-gray-600">Прогноз на горизонт: {forecast.length} точек</div>
+										{forecast && forecast.length > 0 && (
+											<div className="mt-4 h-56">
+												<ResponsiveContainer width="100%" height="100%">
+													<LineChart data={forecast.map((f, i) => ({ step: `T+${i + 1}`, predicted: Number((f.pred_avg_grade ?? f.predicted ?? 0)) }))}>
+														<CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+														<XAxis dataKey="step" tick={{ fontSize: 12 }} />
+														<YAxis tick={{ fontSize: 12 }} />
+														<Tooltip />
+														<Line type="monotone" dataKey="predicted" stroke="#7C3AED" strokeWidth={2} dot={{ r: 2 }} name="Прогноз, балл" />
+													</LineChart>
+												</ResponsiveContainer>
+											</div>
+										)}
 									</div>
 								</div>
 
