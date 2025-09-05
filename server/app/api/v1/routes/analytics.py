@@ -1069,7 +1069,12 @@ async def predict_performance(
 
         horizon_points = horizon_days if bucket == "day" else max(2, horizon_days // 7)
         forecast_submissions = _simple_forecast(submissions_series, horizon_points)
-        forecast_average_grade = _simple_forecast(avg_grade_series, horizon_points)
+        # Use advanced forecasting from risk_analytics_service
+        forecast_avg_objs = risk_analytics_service.forecast_average_grade(
+            series,
+            horizon=horizon_points
+        )
+        forecast_average_grade = [pt.get("pred_avg_grade", 0.0) for pt in forecast_avg_objs]
 
         response = {
             "scope": scope,
