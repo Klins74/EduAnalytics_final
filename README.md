@@ -132,7 +132,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-Подробный список и готовый пример см. в `ENVIRONMENT_VARIABLES.md`.
+Подробный список и готовый пример см. в `ENVIRONMENT_VARIABLES.md`. Для Windows см. `WINDOWS_UNICODE_TROUBLESHOOTING.md`.
 
 ### Docker Services
 - **api** - FastAPI приложение
