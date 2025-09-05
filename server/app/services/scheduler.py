@@ -17,9 +17,10 @@ import json
 
 logger = logging.getLogger(__name__)
 
-async def check_deadlines(notification_service) -> None:
+async def check_deadlines(notification_service, session_factory: callable = None) -> None:
     """Check assignments for upcoming deadlines and send notifications."""
-    async with AsyncSessionLocal() as db:
+    session_factory = session_factory or AsyncSessionLocal
+    async with session_factory() as db:
         try:
             now = datetime.now(timezone.utc)
             

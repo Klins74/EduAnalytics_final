@@ -164,11 +164,16 @@ class TestScheduler:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute = AsyncMock(return_value=mock_result)
         
-        with patch('app.services.scheduler.AsyncSessionLocal') as mock_session:
-            mock_session.return_value.__aenter__.return_value = mock_db
-            
-            # Выполняем проверку
-            await check_deadlines(mock_notification_service)
+        async def _factory():
+            class _Ctx:
+                async def __aenter__(self):
+                    return mock_db
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+            return _Ctx()
+        
+        # Выполняем проверку с подмененным session_factory
+        await check_deadlines(mock_notification_service, session_factory=lambda: _factory())
             
             # Проверяем, что NotificationService не был вызван
             mock_notification_service.send_notification.assert_not_called()
@@ -205,11 +210,16 @@ class TestScheduler:
         # Настраиваем последовательность вызовов execute
         mock_db.execute = AsyncMock(side_effect=[mock_assignments_result, mock_students_result])
         
-        with patch('app.services.scheduler.AsyncSessionLocal') as mock_session:
-            mock_session.return_value.__aenter__.return_value = mock_db
-            
-            # Выполняем проверку
-            await check_deadlines(mock_notification_service)
+        async def _factory():
+            class _Ctx:
+                async def __aenter__(self):
+                    return mock_db
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+            return _Ctx()
+
+        # Выполняем проверку с подмененным session_factory
+        await check_deadlines(mock_notification_service, session_factory=lambda: _factory())
             
             # Проверяем, что NotificationService был вызван
             mock_notification_service.send_notification.assert_called()

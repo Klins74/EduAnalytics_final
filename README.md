@@ -78,7 +78,10 @@ git clone https://github.com/your-username/EduAnalytics.git
 cd EduAnalytics
 ```
 
-### 2. Запуск с Docker
+### 2. Настройка окружения
+Скопируйте `ENV.EXAMPLE` в `.env` и отредактируйте значения для вашей среды. Дополнительно см. `ENVIRONMENT_VARIABLES.md`.
+
+### 3. Запуск с Docker
 ```bash
 # Запуск всех сервисов
 docker-compose up -d
@@ -87,14 +90,14 @@ docker-compose up -d
 docker-compose logs -f api
 ```
 
-### 3. Запуск Frontend
+### 4. Запуск Frontend
 ```bash
 cd src
 npm install
 npm run dev
 ```
 
-### 4. Доступ к приложению
+### 5. Доступ к приложению
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **Ollama**: http://localhost:11434
